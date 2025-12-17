@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}Редактирование профиля{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-md-6 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Редактирование профиля</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Город:</label>
+                            <input type="text" class="form-control" name="city" 
+                                   value="{{ profile.city|default:'' }}" 
+                                   placeholder="Введите ваш город">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Возраст:</label>
+                            <input type="number" class="form-control" name="age" 
+                                   value="{{ profile.age|default:'' }}" 
+                                   min="18" max="80" placeholder="Ваш возраст">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">О себе:</label>
+                            <textarea class="form-control" name="bio" rows="4" 
+                                      placeholder="Расскажите о себе, своих интересах в волейболе...">{{ profile.bio|default:'' }}</textarea>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary flex-grow-1">
+                                Сохранить изменения
+                            </button>
+                            <a href="{% url 'my_profile' %}" class="btn btn-secondary">
+                                Отмена
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

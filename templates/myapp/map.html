@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Карта волейбольных площадок | Волейбольное сообщество</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .map-container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        
+        .map-header {
+            background: linear-gradient(90deg, #4f46e5, #7c3aed);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .map-header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .map-header .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .map-content {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 0;
+            height: 70vh;
+        }
+        
+        #volleyball-map {
+            height: 100%;
+            width: 100%;
+        }
+        
+        .sidebar {
+            background: #f8fafc;
+            border-left: 2px solid #e2e8f0;
+            padding: 1.5rem;
+            overflow-y: auto;
+            height: 100%;
+        }
+        
+        .search-box {
+            margin-bottom: 1.5rem;
+        }
+        
+        .search-box input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 25px;
+            font-size: 14px;
+        }
+        
+        .search-box input:focus {
+            outline: none;
+            border-color: #4f46e5;
+        }
+        
+        .filters-section {
+            margin-bottom: 1.5rem;
+        }
+        
+        .filter-title {
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 0.75rem;
+            font-size: 1.1rem;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .filter-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 8px;
+            transition: background 0.3s;
+        }
+        
+        .filter-checkbox:hover {
+            background: #e2e8f0;
+        }
+        
+        .filter-checkbox input {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        .filter-label {
+            color: #475569;
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+        
+        .court-list {
+            margin-top: 1.5rem;
+        }
+        
+        .court-item {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .court-item:hover {
+            border-color: #4f46e5;
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(79, 70, 229, 0.1);
+        }
+        
+        .court-item.active {
+            border-color: #4f46e5;
+            background: #f0f9ff;
+        }
+        
+        .court-name {
+            font-weight: 600;
+            color: #4f46e5;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+        
+        .court-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+        }
+        
+        .court-rating {
+            color: #f59e0b;
+            font-weight: 600;
+        }
+        
+        .court-price {
+            color: #10b981;
+            font-weight: 600;
+        }
+        
+        .court-free {
+            color: #3b82f6;
+            font-weight: 600;
+        }
+        
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin: 2rem;
+        }
+        
+        .stat-card {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            border: 2px solid #e2e8f0;
+            transition: transform 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: #4f46e5;
+        }
+        
+        .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: #4f46e5;
+        }
+        
+        .stat-number {
+            font-size: 1.8rem;
+            font-weight: bold;
+            display: block;
+            color: #1e293b;
+        }
+        
+        .stat-label {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            padding: 2rem;
+            border-top: 2px solid #e2e8f0;
+        }
+        
+        /* Стили для попапа карты */
+        .leaflet-popup-content {
+            min-width: 250px;
+            max-width: 300px;
+        }
+        
+        .court-popup {
+            padding: 10px;
+        }
+        
+        .popup-name {
+            font-weight: bold;
+            color: #4f46e5;
+            margin-bottom: 8px;
+            font-size: 16px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 5px;
+        }
+        
+        .popup-info {
+            font-size: 14px;
+            color: #475569;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .popup-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 5px;
+        }
+        
+        .popup-btn {
+            padding: 6px 12px;
+            background: #4f46e5;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            flex: 1;
+            text-align: center;
+            transition: background 0.3s;
+        }
+        
+        .popup-btn:hover {
+            background: #4338ca;
+        }
+        
+        .facilities-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin: 8px 0;
+        }
+        
+        .facility-tag {
+            background: #e0e7ff;
+            color: #4f46e5;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        
+        @media (max-width: 1024px) {
+            .map-content {
+                grid-template-columns: 1fr;
+                height: 80vh;
+            }
+            
+            .sidebar {
+                border-left: none;
+                border-top: 2px solid #e2e8f0;
+                height: 300px;
+            }
+            
+            .stats-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .map-container {
+                margin: 0;
+                border-radius: 0;
+            }
+            
+            .stats-cards {
+                grid-template-columns: 1fr;
+                margin: 1rem;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="map-container">
+        <!-- Заголовок -->
+        <div class="map-header">
+            <h1><i class="fas fa-map-marked-alt"></i> Карта волейбольных площадок</h1>
+            <div class="subtitle">Найдите площадки для игры в вашем городе</div>
+        </div>
+        
+        <!-- Статистика -->
+        <div class="stats-cards">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-volleyball-ball"></i>
+                </div>
+                <span class="stat-number" id="total-courts">0</span>
+                <span class="stat-label">Всего площадок</span>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-home"></i>
+                </div>
+                <span class="stat-number" id="indoor-courts">0</span>
+                <span class="stat-label">Крытых</span>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-sun"></i>
+                </div>
+                <span class="stat-number" id="outdoor-courts">0</span>
+                <span class="stat-label">Открытых</span>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-coins"></i>
+                </div>
+                <span class="stat-number" id="free-courts">0</span>
+                <span class="stat-label">Бесплатных</span>
+            </div>
+        </div>
+        
+        <!-- Основной контент: карта + сайдбар -->
+        <div class="map-content">
+            <!-- Карта -->
+            <div id="volleyball-map"></div>
+            
+            <!-- Сайдбар с фильтрами и списком -->
+            <div class="sidebar">
+                <!-- Поиск -->
+                <div class="search-box">
+                    <input type="text" 
+                           id="court-search" 
+                           placeholder="Поиск по названию или адресу..."
+                           onkeyup="searchCourts()">
+                </div>
+                
+                <!-- Фильтры -->
+                <div class="filters-section">
+                    <div class="filter-title">
+                        <i class="fas fa-filter"></i> Фильтры
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-checkbox">
+                            <input type="checkbox" id="filter-indoor" checked onchange="updateFilters()">
+                            <span class="filter-label">
+                                <i class="fas fa-home"></i> Крытые площадки
+                            </span>
+                        </label>
+                        <label class="filter-checkbox">
+                            <input type="checkbox" id="filter-outdoor" checked onchange="updateFilters()">
+                            <span class="filter-label">
+                                <i class="fas fa-sun"></i> Открытые площадки
+                            </span>
+                        </label>
+                        <label class="filter-checkbox">
+                            <input type="checkbox" id="filter-beach" checked onchange="updateFilters()">
+                            <span class="filter-label">
+                                <i class="fas fa-umbrella-beach"></i> Пляжные
+                            </span>
+                        </label>
+                        <label class="filter-checkbox">
+                            <input type="checkbox" id="filter-free" onchange="updateFilters()">
+                            <span class="filter-label">
+                                <i class="fas fa-coins"></i> Только бесплатные
+                            </span>
+                        </label>
+                        <label class="filter-checkbox">
+                            <input type="checkbox" id="filter-lighted" onchange="updateFilters()">
+                            <span class="filter-label">
+                                <i class="fas fa-lightbulb"></i> Только освещённые
+                            </span>
+                        </label>
+                        <label class="filter-checkbox">
+                            <input type="checkbox" id="filter-verified" checked onchange="updateFilters()">
+                            <span class="filter-label">
+                                <i class="fas fa-check-circle"></i> Только проверенные
+                            </span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Список площадок -->
+                <div class="court-list">
+                    <div class="filter-title">
+                        <i class="fas fa-list"></i> Площадки (<span id="filtered-count">0</span>)
+                    </div>
+                    <div id="courts-list">
+                        <!-- Список будет заполнен JavaScript -->
+                        <div class="text-center text-muted py-3">
+                            <i class="fas fa-spinner fa-spin"></i> Загрузка...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Кнопки действий -->
+        <div class="action-buttons">
+            <div class="action-buttons">
+    <!-- Изменяем suggest_court на my_suggestions -->
+            <a href="{% url 'my_suggestions' %}" class="btn btn-primary">
+                <i class="fas fa-plus-circle"></i> Предложить новую площадку
+            </a>
+    
+            <a href="{% url 'my_suggestions' %}" class="btn btn-outline-primary">
+                <i class="fas fa-list"></i> Мои предложения
+            </a>
+    
+    <a href="{% url 'home' %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left"></i> На главную
+    </a>
+    
+    <!-- Изменяем friends_search на search -->
+    <a href="{% url 'search' %}" class="btn btn-outline-primary">
+        <i class="fas fa-user-friends"></i> Найти игроков
+    </a>
+</div>
+        </div>
+    </div>
+
+    <!-- Библиотеки -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Глобальные переменные
+        let map = null;
+        let markers = [];
+        let currentCourt = null;
+        let allCourts = [];
+        
+        // Данные из базы (передаются из Django)
+        const volleyballCourts = {{ courts_json|safe }};
+        
+        // Тестовые данные (если база пуста)
+        const testCourts = [
+            {
+                id: 1,
+                name: "Спорткомплекс 'Чемпион'",
+                lat: 55.7558,
+                lng: 37.6173,
+                type: "indoor",
+                address: "ул. Спортивная, 15, Москва",
+                description: "Крытый зал с профессиональным покрытием. Идеально подходит для тренировок и соревнований.",
+                price: 800,
+                free: false,
+                lighted: true,
+                verified: true,
+                rating: 4.8,
+                facilities: ["Раздевалки", "Душевые", "Прокат мячей", "Тренер", "Кафе"],
+                phone: "+7 (495) 123-45-67",
+                hours: "08:00 - 22:00",
+                courts: 3,
+                surface: "Паркет"
+            },
+            {
+                id: 2,
+                name: "Парк 'Олимпийский'",
+                lat: 55.7618,
+                lng: 37.6093,
+                type: "outdoor",
+                address: "Олимпийский проспект, 22, Москва",
+                description: "Открытые площадки в парковой зоне. Отличное место для игры на свежем воздухе.",
+                price: 0,
+                free: true,
+                lighted: true,
+                verified: true,
+                rating: 4.5,
+                facilities: ["Скамейки", "Освещение", "Рядом парковка"],
+                hours: "06:00 - 23:00",
+                courts: 2,
+                surface: "Асфальт"
+            }
+        ];
+
+        // Инициализация карты
+        function initMap() {
+            // Создаем карту с центром в Москве
+            map = L.map('volleyball-map').setView([55.7558, 37.6173], 12);
+            
+            // Добавляем слой OpenStreetMap
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19,
+            }).addTo(map);
+            
+            // Используем данные из базы или тестовые данные
+            allCourts = volleyballCourts.length > 0 ? volleyballCourts : testCourts;
+            
+            // Загружаем площадки
+            loadCourts();
+            
+            // Обновляем статистику
+            updateStats();
+        }
+
+        // Загрузка площадок на карту
+        function loadCourts() {
+            // Очищаем старые маркеры
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+            
+            // Получаем текущие фильтры
+            const filters = getCurrentFilters();
+            const searchText = document.getElementById('court-search').value.toLowerCase();
+            
+            // Фильтруем площадки
+            const filteredCourts = allCourts.filter(court => {
+                // Поиск по тексту
+                if (searchText && !court.name.toLowerCase().includes(searchText) && 
+                    !court.address.toLowerCase().includes(searchText)) {
+                    return false;
+                }
+                
+                // Фильтры по типу
+                if (filters.indoor && court.type === 'indoor') return true;
+                if (filters.outdoor && court.type === 'outdoor') return true;
+                if (filters.beach && court.type === 'beach') return true;
+                
+                // Дополнительные фильтры
+                if (filters.free && !court.free) return false;
+                if (filters.lighted && !court.lighted) return false;
+                if (filters.verified && !court.verified) return false;
+                
+                return filters.indoor || filters.outdoor || filters.beach;
+            });
+            
+            // Добавляем маркеры
+            filteredCourts.forEach(court => {
+                const icon = getCourtIcon(court);
+                
+                const marker = L.marker([court.lat, court.lng], { icon })
+                    .addTo(map)
+                    .bindPopup(createPopupContent(court))
+                    .on('click', () => selectCourt(court.id));
+                
+                markers.push(marker);
+            });
+            
+            // Обновляем список в сайдбаре
+            updateCourtsList(filteredCourts);
+            
+            // Обновляем счетчик
+            document.getElementById('filtered-count').textContent = filteredCourts.length;
+        }
+
+        // Получение текущих фильтров
+        function getCurrentFilters() {
+            return {
+                indoor: document.getElementById('filter-indoor').checked,
+                outdoor: document.getElementById('filter-outdoor').checked,
+                beach: document.getElementById('filter-beach').checked,
+                free: document.getElementById('filter-free').checked,
+                lighted: document.getElementById('filter-lighted').checked,
+                verified: document.getElementById('filter-verified').checked
+            };
+        }
+
+        // Получение иконки для типа площадки
+        function getCourtIcon(court) {
+            let iconUrl = '';
+            
+            if (court.type === 'indoor') {
+                iconUrl = 'https://cdn-icons-png.flaticon.com/512/619/619032.png'; // Крытая
+            } else if (court.type === 'outdoor') {
+                iconUrl = 'https://cdn-icons-png.flaticon.com/512/857/857455.png'; // Открытая
+            } else if (court.type === 'beach') {
+                iconUrl = 'https://cdn-icons-png.flaticon.com/512/3082/3082383.png'; // Пляжная
+            } else {
+                iconUrl = 'https://cdn-icons-png.flaticon.com/512/857/857455.png'; // По умолчанию
+            }
+            
+            return L.icon({
+                iconUrl: iconUrl,
+                iconSize: [32, 32],
+                iconAnchor: [16, 32],
+                popupAnchor: [0, -32],
+                className: 'court-marker'
+            });
+        }
+
+        // Создание содержимого попапа
+        function createPopupContent(court) {
+            // Фильтруем пустые удобства
+            const facilities = court.facilities ? court.facilities.filter(f => f) : [];
+            const facilitiesHTML = facilities.map(f => 
+                `<span class="facility-tag">${f}</span>`
+            ).join('');
+            
+            return `
+                <div class="court-popup">
+                    <div class="popup-name">${court.name}</div>
+                    <div class="popup-info">
+                        <i class="fas fa-map-marker-alt"></i> ${court.address}
+                    </div>
+                    <div class="popup-info">
+                        <i class="fas ${court.type === 'indoor' ? 'fa-home' : court.type === 'beach' ? 'fa-umbrella-beach' : 'fa-sun'}"></i> 
+                        ${court.type === 'indoor' ? 'Крытая' : court.type === 'beach' ? 'Пляжная' : 'Открытая'} площадка
+                    </div>
+                    <div class="popup-info">
+                        <i class="fas ${court.free ? 'fa-coins' : 'fa-money-bill-wave'}"></i> 
+                        ${court.free ? 'Бесплатно' : court.price + ' руб/час'}
+                    </div>
+                    <div class="popup-info">
+                        <i class="fas fa-star"></i> Рейтинг: ${court.rating}/5
+                    </div>
+                    <div class="popup-info">
+                        <i class="fas fa-volleyball-ball"></i> Площадок: ${court.courts}
+                    </div>
+                    <div class="popup-info">
+                        <i class="fas fa-clock"></i> ${court.hours}
+                    </div>
+                    ${court.phone ? `<div class="popup-info"><i class="fas fa-phone"></i> ${court.phone}</div>` : ''}
+                    
+                    ${court.description ? `<div class="popup-info"><small>${court.description}</small></div>` : ''}
+                    
+                    ${facilitiesHTML ? `
+                        <div class="popup-info">
+                            <strong>Удобства:</strong>
+                            <div class="facilities-list">${facilitiesHTML}</div>
+                        </div>
+                    ` : ''}
+                    
+                    ${court.surface ? `<div class="popup-info">
+                        <i class="fas fa-layer-group"></i> Покрытие: ${court.surface}
+                    </div>` : ''}
+                    
+                    <div class="popup-actions">
+                        <button class="popup-btn" onclick="planVisit(${court.id})">
+                            <i class="fas fa-calendar-plus"></i> Запланировать
+                        </button>
+                        <button class="popup-btn" onclick="showDirections(${court.id})">
+                            <i class="fas fa-route"></i> Маршрут
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Обновление списка площадок в сайдбаре
+        function updateCourtsList(courts) {
+            const courtsList = document.getElementById('courts-list');
+            
+            if (courts.length === 0) {
+                courtsList.innerHTML = `
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-search"></i> Площадки не найдены
+                    </div>
+                `;
+                return;
+            }
+            
+            courtsList.innerHTML = '';
+            
+            courts.forEach(court => {
+                const courtElement = document.createElement('div');
+                courtElement.className = 'court-item';
+                courtElement.dataset.id = court.id;
+                courtElement.innerHTML = `
+                    <div class="court-name">${court.name}</div>
+                    <div class="court-info">
+                        <i class="fas fa-map-marker-alt"></i> ${court.address}
+                    </div>
+                    <div class="court-info">
+                        <i class="fas ${court.type === 'indoor' ? 'fa-home' : court.type === 'beach' ? 'fa-umbrella-beach' : 'fa-sun'}"></i>
+                        ${court.type === 'indoor' ? 'Крытая' : court.type === 'beach' ? 'Пляжная' : 'Открытая'}
+                        <span class="court-rating ms-2">
+                            <i class="fas fa-star"></i> ${court.rating}
+                        </span>
+                    </div>
+                    <div class="court-info">
+                        ${court.free ? 
+                            `<span class="court-free"><i class="fas fa-coins"></i> Бесплатно</span>` : 
+                            `<span class="court-price"><i class="fas fa-money-bill-wave"></i> ${court.price} руб/час</span>`
+                        }
+                        <span class="ms-2">
+                            <i class="fas fa-volleyball-ball"></i> ${court.courts}
+                        </span>
+                    </div>
+                `;
+                
+                courtElement.addEventListener('click', () => {
+                    selectCourt(court.id);
+                    flyToCourt(court);
+                });
+                
+                courtsList.appendChild(courtElement);
+            });
+        }
+
+        // Выбор площадки
+        function selectCourt(courtId) {
+            // Убираем выделение со всех
+            document.querySelectorAll('.court-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Выделяем выбранную
+            const selectedItem = document.querySelector(`.court-item[data-id="${courtId}"]`);
+            if (selectedItem) {
+                selectedItem.classList.add('active');
+            }
+            
+            // Находим маркер и открываем попап
+            const marker = markers.find(m => {
+                const popup = m.getPopup();
+                return popup && popup.getContent().includes(`"${courtId}"`);
+            });
+            
+            if (marker) {
+                marker.openPopup();
+                currentCourt = allCourts.find(c => c.id === courtId);
+            }
+        }
+
+        // Перелет к площадке
+        function flyToCourt(court) {
+            if (map) {
+                map.flyTo([court.lat, court.lng], 15);
+            }
+        }
+
+        // Обновление статистики
+        function updateStats() {
+            const total = allCourts.length;
+            const indoor = allCourts.filter(c => c.type === 'indoor').length;
+            const outdoor = allCourts.filter(c => c.type === 'outdoor').length;
+            const free = allCourts.filter(c => c.free).length;
+            
+            document.getElementById('total-courts').textContent = total;
+            document.getElementById('indoor-courts').textContent = indoor;
+            document.getElementById('outdoor-courts').textContent = outdoor;
+            document.getElementById('free-courts').textContent = free;
+        }
+
+        // Поиск площадок
+        function searchCourts() {
+            loadCourts();
+        }
+
+        // Обновление фильтров
+        function updateFilters() {
+            loadCourts();
+        }
+
+        // Планирование посещения
+        function planVisit(courtId) {
+            const court = allCourts.find(c => c.id === courtId);
+            if (court) {
+                alert(`Вы запланировали посещение:\n\n${court.name}\n${court.address}\n\nРекомендуем забронировать площадку заранее по телефону: ${court.phone || 'не указан'}`);
+            }
+        }
+
+        // Показать маршрут
+        function showDirections(courtId) {
+            const court = allCourts.find(c => c.id === courtId);
+            if (court && navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition((position) => {
+                    const userLat = position.coords.latitude;
+                    const userLng = position.coords.longitude;
+                    
+                    // Открываем Яндекс.Карты с маршрутом
+                    const url = `https://yandex.ru/maps/?rtext=${userLat},${userLng}~${court.lat},${court.lng}&rtt=auto`;
+                    window.open(url, '_blank');
+                }, () => {
+                    // Если геолокация не доступна, открываем карту с меткой
+                    const url = `https://yandex.ru/maps/?pt=${court.lng},${court.lat}&z=15`;
+                    window.open(url, '_blank');
+                });
+            } else {
+                const url = `https://yandex.ru/maps/?pt=${court.lng},${court.lat}&z=15`;
+                window.open(url, '_blank');
+            }
+        }
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            initMap();
+            
+            // Проверяем, есть ли в URL параметр court для автоматического выбора
+            const urlParams = new URLSearchParams(window.location.search);
+            const courtId = urlParams.get('court');
+            
+            if (courtId) {
+                setTimeout(() => {
+                    selectCourt(parseInt(courtId));
+                }, 1000);
+            }
+            
+            // Показать уведомление если нет площадок в базе
+            if (volleyballCourts.length === 0) {
+                setTimeout(() => {
+                    const alertHTML = `
+                        <div class="alert alert-info alert-dismissible fade show" style="position: fixed; top: 20px; right: 20px; z-index: 1000; max-width: 400px;">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>База площадок пуста!</strong><br>
+                            Предложите первую площадку, чтобы помочь другим игрокам.
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    `;
+                    document.body.insertAdjacentHTML('beforeend', alertHTML);
+                }, 2000);
+            }
+        });
+    </script>
+</body>
+</html>

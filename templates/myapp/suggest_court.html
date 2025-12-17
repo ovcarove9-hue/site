@@ -1,0 +1,313 @@
+<!-- myapp/templates/myapp/suggest_court.html -->
+{% extends "myapp/base.html" %}
+{% load static %}
+
+{% block title %}Предложить новую площадку{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">
+                        <i class="fas fa-map-marker-alt"></i> Предложить новую волейбольную площадку
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-4">
+                        Заполните форму ниже. После проверки модератором площадка появится на карте.
+                        Поля отмеченные * обязательны для заполнения.
+                    </p>
+                    
+                    <form method="POST" id="courtForm">
+                        {% csrf_token %}
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <h5><i class="fas fa-info-circle"></i> Основная информация</h5>
+                                <hr>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Название площадки *</label>
+                                    {{ form.name }}
+                                    {% if form.name.errors %}
+                                    <div class="text-danger">{{ form.name.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Город *</label>
+                                        {{ form.city }}
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Тип площадки *</label>
+                                        {{ form.court_type }}
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Адрес *</label>
+                                    {{ form.address }}
+                                    <small class="text-muted">Полный адрес с улицей и домом</small>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Описание</label>
+                                    {{ form.description }}
+                                    <small class="text-muted">Опишите площадку: покрытие, состояние, особенности</small>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <h5><i class="fas fa-cogs"></i> Характеристики</h5>
+                                <hr>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Количество площадок</label>
+                                        {{ form.courts_count }}
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Покрытие</label>
+                                        {{ form.surface }}
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        {{ form.is_free }}
+                                        <label class="form-check-label">Бесплатная площадка</label>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3" id="priceField">
+                                    <label class="form-label">Цена за час (руб)</label>
+                                    {{ form.price_per_hour }}
+                                    <small class="text-muted">Оставьте 0 для бесплатных площадок</small>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Детали оплаты</label>
+                                    {{ form.price_details }}
+                                    <small class="text-muted">Скидки, абонементы, условия аренды</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Координаты -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5><i class="fas fa-map-pin"></i> Координаты (необязательно)</h5>
+                                <hr>
+                                <p class="text-muted">Укажите координаты для точного отображения на карте</p>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Широта</label>
+                                        {{ coord_form.latitude }}
+                                        <small class="text-muted">Например: 55.7558</small>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Долгота</label>
+                                        {{ coord_form.longitude }}
+                                        <small class="text-muted">Например: 37.6173</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Удобства -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5><i class="fas fa-thumbs-up"></i> Удобства</h5>
+                                <hr>
+                                
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <div class="form-check form-switch">
+                                            {{ form.is_lighted }}
+                                            <label class="form-check-label">Есть освещение</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <div class="form-check form-switch">
+                                            {{ form.has_showers }}
+                                            <label class="form-check-label">Есть душ</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <div class="form-check form-switch">
+                                            {{ form.has_locker_rooms }}
+                                            <label class="form-check-label">Есть раздевалки</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <div class="form-check form-switch">
+                                            {{ form.has_equipment_rental }}
+                                            <label class="form-check-label">Аренда инвентаря</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <div class="form-check form-switch">
+                                            {{ form.has_parking }}
+                                            <label class="form-check-label">Есть парковка</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <div class="form-check form-switch">
+                                            {{ form.has_cafe }}
+                                            <label class="form-check-label">Есть кафе/буфет</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Время работы и контакты -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <h5><i class="fas fa-clock"></i> Время работы</h5>
+                                <hr>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Открытие</label>
+                                        {{ form.opening_time }}
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Закрытие</label>
+                                        {{ form.closing_time }}
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Дни работы</label>
+                                    {{ form.working_days }}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <h5><i class="fas fa-phone"></i> Контакты</h5>
+                                <hr>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Телефон</label>
+                                    {{ form.phone }}
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Сайт</label>
+                                    {{ form.website }}
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Email</label>
+                                    {{ form.email }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Дополнительно -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5><i class="fas fa-image"></i> Дополнительно</h5>
+                                <hr>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Ссылка на фото</label>
+                                        {{ form.photo_url }}
+                                        <small class="text-muted">Загрузите фото на imgur.com</small>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Теги для поиска</label>
+                                        {{ form.tags }}
+                                        <small class="text-muted">Через запятую: волейбол, спорт, площадка</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Подтверждение -->
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" required id="acceptRules">
+                                <label class="form-check-label" for="acceptRules">
+                                    Я подтверждаю, что предоставленная информация точна и соответствует правилам сообщества
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Кнопки -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'map' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Отмена
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i> Отправить на модерацию
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-control, .form-select {
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .form-check-input:checked {
+        background-color: #667eea;
+        border-color: #667eea;
+    }
+    
+    .card {
+        border-radius: 15px;
+        border: none;
+    }
+    
+    .card-header {
+        border-radius: 15px 15px 0 0 !important;
+    }
+</style>
+
+<script>
+    // Показать/скрыть поле цены в зависимости от чекбокса "бесплатно"
+    document.getElementById('id_is_free').addEventListener('change', function() {
+        const priceField = document.getElementById('priceField');
+        const priceInput = document.getElementById('id_price_per_hour');
+        
+        if (this.checked) {
+            priceField.style.opacity = '0.6';
+            priceInput.value = 0;
+            priceInput.disabled = true;
+        } else {
+            priceField.style.opacity = '1';
+            priceInput.disabled = false;
+        }
+    });
+    
+    // Инициализация
+    document.addEventListener('DOMContentLoaded', function() {
+        const isFreeCheckbox = document.getElementById('id_is_free');
+        if (isFreeCheckbox) {
+            isFreeCheckbox.dispatchEvent(new Event('change'));
+        }
+    });
+</script>
+{% endblock %}
