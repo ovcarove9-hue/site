@@ -1,47 +1,41 @@
-<!-- myapp/templates/myapp/create_court.html -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Создать площадку</title>
+    <title>Создать игру | Волейбольный клуб</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #333;
             min-height: 100vh;
             padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
         .container {
-            max-width: 800px;
+            max-width: 1000px;
             margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
         
         .header {
-            text-align: center;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
             margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            text-align: center;
         }
         
         .header h1 {
             color: #2d3748;
-            font-size: 2.2rem;
+            font-size: 2.5rem;
             margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
         }
         
         .header p {
@@ -49,401 +43,292 @@
             font-size: 1.1rem;
         }
         
-        .form-group {
-            margin-bottom: 20px;
+        .form-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+            margin-bottom: 30px;
         }
         
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
+        .form-label {
+            font-weight: 600;
             color: #4a5568;
+            margin-bottom: 8px;
+            display: block;
         }
         
-        .required::after {
-            content: " *";
-            color: #e53e3e;
-        }
-        
-        input, select, textarea {
-            width: 100%;
-            padding: 12px;
+        .form-control, .form-select {
             border: 2px solid #e2e8f0;
-            border-radius: 12px;
+            border-radius: 10px;
+            padding: 12px 15px;
             font-size: 1rem;
-            font-family: inherit;
-            transition: all 0.3s ease;
+            transition: all 0.3s;
         }
         
-        input:focus, select:focus, textarea:focus {
-            outline: none;
+        .form-control:focus, .form-select:focus {
             border-color: #667eea;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
         
-        textarea {
-            min-height: 100px;
-            resize: vertical;
-        }
-        
-        .checkbox-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin: 15px 0;
-        }
-        
-        .checkbox-group input[type="checkbox"] {
-            width: 20px;
-            height: 20px;
-        }
-        
-        .form-actions {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 2px solid #e2e8f0;
-        }
-        
         .btn {
-            padding: 12px 25px;
-            border: none;
-            border-radius: 50px;
+            padding: 12px 30px;
+            border-radius: 10px;
             font-weight: 600;
             font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
+            transition: all 0.3s;
         }
         
-        .btn-primary {
-            background: #667eea;
-            color: white;
+        .btn-success {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            border: none;
         }
         
-        .btn-primary:hover {
-            background: #5a67d8;
+        .btn-success:hover {
             transform: translateY(-3px);
-            box-shadow: 0 7px 15px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 7px 15px rgba(56, 161, 105, 0.3);
         }
         
-        .btn-secondary {
-            background: #a0aec0;
-            color: white;
+        .btn-outline-secondary {
+            border: 2px solid #cbd5e0;
+            color: #718096;
         }
         
-        .btn-secondary:hover {
-            background: #718096;
+        .btn-outline-secondary:hover {
+            background-color: #f7fafc;
+            border-color: #a0aec0;
         }
         
-        .messages {
-            margin-bottom: 25px;
+        .tips-card {
+            background: #ebf8ff;
+            border: 2px solid #90cdf4;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
         }
         
-        .message {
-            padding: 15px;
-            border-radius: 12px;
+        .tips-card h5 {
+            color: #2b6cb0;
+            margin-bottom: 15px;
+        }
+        
+        .tips-card ul {
+            padding-left: 20px;
+            margin-bottom: 0;
+        }
+        
+        .tips-card li {
             margin-bottom: 10px;
-            border-left: 5px solid;
+            color: #4a5568;
         }
         
-        .success {
-            background: #d4edda;
-            color: #155724;
-            border-left-color: #28a745;
-        }
-        
-        .error {
-            background: #f8d7da;
-            color: #721c24;
-            border-left-color: #dc3545;
-        }
-        
-        @media (max-width: 768px) {
-            .container {
-                padding: 20px;
-            }
-            
-            .header h1 {
-                font-size: 1.8rem;
-            }
-            
-            .form-actions {
-                flex-direction: column;
-                gap: 10px;
-            }
-            
-            .btn {
-                width: 100%;
-                justify-content: center;
-            }
+        .icon {
+            color: #667eea;
+            margin-right: 10px;
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- Шапка -->
         <div class="header">
-            <h1><i class="fas fa-map-marker-alt"></i> Создать волейбольную площадку</h1>
-            <p>Предложите новую площадку для нашего сообщества</p>
-        </div>
-        
-        <!-- Сообщения -->
-        {% if messages %}
-        <div class="messages">
-            {% for message in messages %}
-            <div class="message {{ message.tags }}">
-                {{ message }}
+            <h1><i class="fas fa-volleyball-ball icon"></i>Создать новую игру</h1>
+            <p>Организуйте волейбольную игру и пригласите других игроков</p>
+            
+            <!-- Навигация -->
+            <div class="mt-4">
+                <a href="/" class="btn btn-outline-secondary me-2">
+                    <i class="fas fa-home"></i> На главную
+                </a>
+                <a href="/search/" class="btn btn-outline-secondary me-2">
+                    <i class="fas fa-search"></i> Поиск игроков
+                </a>
+                <a href="/profile/{{ user.id }}/" class="btn btn-outline-secondary">
+                    <i class="fas fa-user"></i> Мой профиль
+                </a>
             </div>
-            {% endfor %}
         </div>
-        {% endif %}
         
         <!-- Форма -->
-        <form method="POST">
-            {% csrf_token %}
-            
-            <div class="form-group">
-                <label for="name" class="required">Название площадки</label>
-                <input type="text" id="name" name="name" required 
-                       placeholder="Например: Спорткомплекс 'Чемпион'">
-            </div>
-            
-            <div class="form-group">
-                <label for="address" class="required">Адрес</label>
-                <input type="text" id="address" name="address" required 
-                       placeholder="Полный адрес с улицей и домом">
-            </div>
-            
-            <div class="form-group">
-                <label for="city" class="required">Город</label>
-                <input type="text" id="city" name="city" required 
-                       placeholder="Например: Москва">
-            </div>
-            
-            <div class="form-group">
-                <label for="court_type" class="required">Тип площадки</label>
-                <select id="court_type" name="court_type" required>
-                    <option value="outdoor">Открытая</option>
-                    <option value="indoor">Крытая</option>
-                    <option value="beach">Пляжная</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label for="description">Описание</label>
-                <textarea id="description" name="description" 
-                          placeholder="Опишите площадку: покрытие, состояние, особенности..."></textarea>
-            </div>
-            
-            <div class="checkbox-group">
-                <input type="checkbox" id="is_free" name="is_free">
-                <label for="is_free">Бесплатная площадка</label>
-            </div>
-            
-            <div class="form-group" id="priceField">
-                <label for="price">Цена за час (руб)</label>
-                <input type="number" id="price" name="price" min="0" step="50" value="0">
-                <small style="color: #718096; font-size: 0.9rem;">Оставьте 0 для бесплатных площадок</small>
-            </div>
-            
-            <div class="form-actions">
-                <a href="{% url 'map' %}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Отмена
-                </a>
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-paper-plane"></i> Отправить на модерацию
-                </button>
-            </div>
-        </form>
-    </div>
-
-    <script>
-        // Показываем/скрываем поле цены
-        document.getElementById('is_free').addEventListener('change', function() {
-            const priceField = document.getElementById('priceField');
-            const priceInput = document.getElementById('price');
-            
-            if (this.checked) {
-                priceField.style.opacity = '0.6';
-                priceInput.value = 0;
-                priceInput.disabled = true;
-            } else {
-                priceField.style.opacity = '1';
-                priceInput.disabled = false;
-            }
-        });
+        <div class="form-card">
+            <form method="post" action="/game_create/">
+                {% csrf_token %}
+                
+                <!-- Сообщения об ошибках/успехе -->
+                {% if messages %}
+                    <div class="mb-4">
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                
+                <!-- Основная информация -->
+                <div class="row mb-4">
+                    <div class="col-md-6 mb-3">
+                        <label for="title" class="form-label">
+                            <i class="fas fa-heading icon"></i>Название игры *
+                        </label>
+                        <input type="text" class="form-control" id="title" name="title" 
+                               placeholder="Например: Вечерняя игра в центре" required>
+                        <small class="text-muted">Придумайте понятное название для игры</small>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label for="sport_type" class="form-label">
+                            <i class="fas fa-volleyball-ball icon"></i>Тип игры *
+                        </label>
+                        <select class="form-select" id="sport_type" name="sport_type" required>
+                            <option value="" selected disabled>Выберите тип игры</option>
+                            <option value="beach">Пляжный волейбол (2x2)</option>
+                            <option value="indoor">Зал (классика 6x6)</option>
+                            <option value="mini">Мини-волейбол (4x4)</option>
+                            <option value="mixed">Микст (смешанные команды)</option>
+                            <option value="training">Тренировка/разминка</option>
+                            <option value="tournament">Турнирная игра</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Дата и время -->
+                <div class="row mb-4">
+                    <div class="col-md-6 mb-3">
+                        <label for="game_date" class="form-label">
+                            <i class="fas fa-calendar-day icon"></i>Дата игры *
+                        </label>
+                        <input type="date" class="form-control" id="game_date" name="game_date" required>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label for="game_time" class="form-label">
+                            <i class="fas fa-clock icon"></i>Время начала *
+                        </label>
+                        <input type="time" class="form-control" id="game_time" name="game_time" required>
+                    </div>
+                </div>
+                
+                <!-- Место проведения -->
+                <div class="mb-4">
+                    <label for="location" class="form-label">
+                        <i class="fas fa-map-marker-alt icon"></i>Место проведения *
+                    </label>
+                    <input type="text" class="form-control" id="location" name="location" 
+                           placeholder="Например: Спорткомплекс 'Волейбол', ул. Спортивная, 15" required>
+                    <small class="text-muted">Укажите точный адрес или название площадки</small>
+                </div>
+                
+                <!-- Описание -->
+                <div class="mb-4">
+                    <label for="description" class="form-label">
+                        <i class="fas fa-align-left icon"></i>Описание игры
+                    </label>
+                    <textarea class="form-control" id="description" name="description" 
+                              rows="4" placeholder="Опишите детали игры, правила, что нужно взять с собой..."></textarea>
+                </div>
+                
+                <!-- Участники и уровень -->
+                <div class="row mb-4">
+                    <div class="col-md-6 mb-3">
+                        <label for="max_players" class="form-label">
+                            <i class="fas fa-users icon"></i>Макс. количество игроков *
+                        </label>
+                        <input type="number" class="form-control" id="max_players" name="max_players" 
+                               min="2" max="24" value="12" required>
+                        <small class="text-muted">Сколько игроков может присоединиться</small>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label for="skill_level" class="form-label">
+                            <i class="fas fa-chart-line icon"></i>Уровень подготовки
+                        </label>
+                        <select class="form-select" id="skill_level" name="skill_level">
+                            <option value="any">Любой уровень</option>
+                            <option value="beginner">Начинающий</option>
+                            <option value="intermediate" selected>Средний</option>
+                            <option value="advanced">Продвинутый</option>
+                            <option value="pro">Профессиональный</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Контактная информация -->
+                <div class="mb-4">
+                    <div class="p-4 bg-light rounded">
+                        <h5 class="mb-3"><i class="fas fa-id-card icon"></i>Контактная информация</h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="contact_name" class="form-label">Контактное лицо *</label>
+                                <input type="text" class="form-control" id="contact_name" 
+                                       name="contact_name" required>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="contact_phone" class="form-label">Телефон для связи</label>
+                                <input type="tel" class="form-control" id="contact_phone" 
+                                       name="contact_phone" placeholder="+7 (XXX) XXX-XX-XX">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Кнопки -->
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="/" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Назад
+                    </a>
+                    
+                    <div>
+                        <button type="reset" class="btn btn-outline-danger me-2">
+                            <i class="fas fa-redo me-2"></i>Очистить
+                        </button>
+                        
+                        <button type="submit" class="btn btn-success px-4">
+                            <i class="fas fa-plus-circle me-2"></i>Создать игру
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
         
-        // Загружаем FontAwesome если нет
-        if (!document.querySelector('link[href*="font-awesome"]')) {
-            const faLink = document.createElement('link');
-            faLink.rel = 'stylesheet';
-            faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css';
-            document.head.appendChild(faLink);
-        }
-    </script>
-</body>
-</html>{% extends 'myapp/base.html' %}
-
-{% block title %}Создать игру - Волейбольное сообщество{% endblock %}
-
-{% block content %}
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-md-8 mx-auto">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h4><i class="fas fa-volleyball-ball"></i> Создать новую игру</h4>
-                </div>
-                <div class="card-body">
-                    <form method="post" id="game-form">
-                        {% csrf_token %}
-                        
-                        {% if form.non_field_errors %}
-                        <div class="alert alert-danger">
-                            {{ form.non_field_errors }}
-                        </div>
-                        {% endif %}
-                        
-                        <div class="row">
-                            <div class="col-md-8">
-                                <div class="form-group">
-                                    <label for="{{ form.title.id_for_label }}">Название игры *</label>
-                                    {{ form.title }}
-                                    {% if form.title.errors %}
-                                    <div class="text-danger">{{ form.title.errors }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label for="{{ form.game_type.id_for_label }}">Тип игры *</label>
-                                    {{ form.game_type }}
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="{{ form.description.id_for_label }}">Описание</label>
-                            {{ form.description }}
-                            <small class="form-text text-muted">Опишите детали, что взять с собой, правила и т.д.</small>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.start_time.id_for_label }}">Начало *</label>
-                                    {{ form.start_time }}
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.end_time.id_for_label }}">Окончание *</label>
-                                    {{ form.end_time }}
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Место проведения</label>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    {{ form.court }}
-                                    <small class="form-text text-muted">Выберите из списка площадок</small>
-                                </div>
-                                <div class="col-md-6">
-                                    <p class="text-center my-2">или</p>
-                                    {{ form.custom_location }}
-                                    <small class="form-text text-muted">Укажите место вручную</small>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label for="{{ form.skill_level.id_for_label }}">Уровень игроков</label>
-                                    {{ form.skill_level }}
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label for="{{ form.max_players.id_for_label }}">Максимум игроков</label>
-                                    {{ form.max_players }}
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label for="{{ form.min_players.id_for_label }}">Минимум игроков</label>
-                                    {{ form.min_players }}
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.price.id_for_label }}">Стоимость участия (₽)</label>
-                                    <div class="input-group">
-                                        {{ form.price }}
-                                        <div class="input-group-append">
-                                            <span class="input-group-text">₽/чел</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group mt-4 pt-2">
-                                    <div class="form-check">
-                                        {{ form.is_private }}
-                                        <label class="form-check-label" for="{{ form.is_private.id_for_label }}">
-                                            Приватная игра (только по приглашению)
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group mt-4">
-                            <button type="submit" class="btn btn-success btn-lg">
-                                <i class="fas fa-check"></i> Создать игру
-                            </button>
-                            <a href="{% url 'games_calendar' %}" class="btn btn-secondary btn-lg">
-                                <i class="fas fa-times"></i> Отмена
-                            </a>
-                        </div>
-                    </form>
-                </div>
-            </div>
-            
-            <div class="card mt-4">
-                <div class="card-header bg-info text-white">
-                    <h5><i class="fas fa-lightbulb"></i> Советы по созданию игры</h5>
-                </div>
-                <div class="card-body">
-                    <ul>
-                        <li>Указывайте реалистичное время начала и окончания</li>
-                        <li>Четко опишите уровень игроков, чтобы избежать недопонимания</li>
-                        <li>Укажите стоимость заранее, если игра платная</li>
-                        <li>Для тренировок рекомендуемое количество игроков: 6-12</li>
-                        <li>Создавайте игры за 1-3 дня до начала</li>
-                    </ul>
-                </div>
-            </div>
+        <!-- Советы -->
+        <div class="tips-card">
+            <h5><i class="fas fa-lightbulb icon"></i>Советы по организации игры</h5>
+            <ul>
+                <li>Указывайте точное время и место — это поможет игрокам не опоздать</li>
+                <li>Опишите ожидаемый уровень игры, чтобы пришли подходящие игроки</li>
+                <li>Создавайте игры заранее — так больше людей успеют запланировать участие</li>
+                <li>После создания игры вы сможете управлять списком участников</li>
+            </ul>
         </div>
     </div>
-</div>
-
-<style>
-    .form-control:focus {
-        border-color: #28a745;
-        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
-    }
-    .card {
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-</style>
-{% endblock %}
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Устанавливаем минимальную дату - сегодня
+        document.addEventListener('DOMContentLoaded', function() {
+            const today = new Date().toISOString().split('T')[0];
+            const dateInput = document.getElementById('game_date');
+            dateInput.min = today;
+            
+            // Если поле пустое, устанавливаем сегодняшнюю дату
+            if (!dateInput.value) {
+                dateInput.value = today;
+            }
+            
+            // Устанавливаем время (ближайший час)
+            const timeInput = document.getElementById('game_time');
+            if (!timeInput.value) {
+                const now = new Date();
+                const nextHour = new Date(now.getTime() + 60 * 60 * 1000);
+                timeInput.value = nextHour.toTimeString().slice(0, 5);
+            }
+        });
+    </script>
+</body>
+</html>

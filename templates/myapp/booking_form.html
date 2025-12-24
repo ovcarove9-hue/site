@@ -1,0 +1,337 @@
+<!-- templates/booking_form.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Хлебные крошки -->
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'courts_map' %}">Карта площадок</a></li>
+                    <li class="breadcrumb-item"><a href="#" onclick="history.back()">{{ court.name }}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Бронирование</li>
+                </ol>
+            </nav>
+            
+            <!-- Заголовок -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h2 class="mb-3">
+                        <i class="fas fa-calendar-check text-primary me-2"></i>Бронирование площадки
+                    </h2>
+                    <div class="d-flex align-items-center">
+                        <h4 class="mb-0">{{ court.name }}</h4>
+                        <span class="badge bg-primary ms-3">{{ court.get_court_type_display }}</span>
+                        {% if court.is_free %}
+                            <span class="badge bg-success ms-2">Бесплатно</span>
+                        {% else %}
+                            <span class="badge bg-warning ms-2">{{ court.price_per_hour }}₽/час</span>
+                        {% endif %}
+                    </div>
+                    <p class="text-muted mb-0 mt-2">
+                        <i class="fas fa-map-marker-alt me-2"></i>{{ court.address }}
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Форма бронирования -->
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="post" id="bookingForm">
+                        {% csrf_token %}
+                        
+                        <!-- Информация о площадке -->
+                        <input type="hidden" name="court_id" value="{{ court.id }}">
+                        
+                        <!-- Дата игры -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label for="booking_date" class="form-label">
+                                    <i class="fas fa-calendar-day me-2"></i>Дата игры *
+                                </label>
+                                <input type="date" 
+                                       class="form-control" 
+                                       id="booking_date" 
+                                       name="booking_date" 
+                                       required 
+                                       min="{% now 'Y-m-d' %}"
+                                       max="{{ max_date }}">
+                                <div class="form-text">Вы можете забронировать не более чем на {{ court.advance_booking_days }} дней вперед</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="participants_count" class="form-label">
+                                    <i class="fas fa-users me-2"></i>Количество игроков *
+                                </label>
+                                <select class="form-select" id="participants_count" name="participants_count" required>
+                                    <option value="4">4 игрока (2x2)</option>
+                                    <option value="6" selected>6 игроков (3x3)</option>
+                                    <option value="8">8 игроков (4x4)</option>
+                                    <option value="12">12 игроков (6x6)</option>
+                                    <option value="14">14 игроков</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Выбор времени -->
+                        <div class="mb-4">
+                            <label class="form-label">
+                                <i class="fas fa-clock me-2"></i>Время игры *
+                            </label>
+                            <div id="timeSlotsContainer" class="border rounded p-3 bg-light">
+                                <p class="text-center text-muted">
+                                    <i class="fas fa-spinner fa-spin me-2"></i>
+                                    Выберите дату, чтобы увидеть доступное время
+                                </p>
+                            </div>
+                            <div class="form-text mt-2">
+                                Площадка работает с {{ court.opening_time|time:"H:i" }} до {{ court.closing_time|time:"H:i" }}
+                            </div>
+                        </div>
+                        
+                        <!-- Продолжительность -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label for="hours" class="form-label">
+                                    <i class="fas fa-hourglass-half me-2"></i>Продолжительность *
+                                </label>
+                                <select class="form-select" id="hours" name="hours" required>
+                                    {% for i in hour_range %}
+                                    <option value="{{ i }}">{{ i }} час{{ i|pluralize:"ов" }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">
+                                    Минимум {{ court.min_booking_hours }} час, максимум {{ court.max_booking_hours }} часа
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card bg-light h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-title">
+                                            <i class="fas fa-money-bill-wave me-2"></i>Стоимость
+                                        </h6>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span>Цена за час:</span>
+                                            <strong id="hourPrice">{{ court.price_per_hour }}₽</strong>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center mt-2">
+                                            <span>Итого:</span>
+                                            <h4 class="text-primary mb-0" id="totalPrice">0₽</h4>
+                                        </div>
+                                        <small class="text-muted">*Стоимость обновится после выбора времени</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Контактная информация -->
+                        <div class="mb-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <i class="fas fa-id-card me-2"></i>Контактная информация
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="contact_name" class="form-label">Ваше имя *</label>
+                                            <input type="text" 
+                                                   class="form-control" 
+                                                   id="contact_name" 
+                                                   name="contact_name" 
+                                                   value="{{ user.get_full_name|default:user.username }}"
+                                                   required>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="contact_phone" class="form-label">Телефон *</label>
+                                            <input type="tel" 
+                                                   class="form-control" 
+                                                   id="contact_phone" 
+                                                   name="contact_phone" 
+                                                   required
+                                                   pattern="[0-9]{10,15}"
+                                                   placeholder="+7 999 123-45-67">
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="notes" class="form-label">Дополнительные пожелания</label>
+                                        <textarea class="form-control" 
+                                                  id="notes" 
+                                                  name="notes" 
+                                                  rows="3"
+                                                  placeholder="Особые требования, уровень игроков и т.д."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Кнопки -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="#" onclick="history.back()" class="btn btn-outline-secondary me-2">
+                                <i class="fas fa-arrow-left me-2"></i>Назад
+                            </a>
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-check-circle me-2"></i>Забронировать
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Правила бронирования -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-header bg-light">
+                    <i class="fas fa-info-circle me-2"></i>Правила бронирования
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li>Бронирование подтверждается после оплаты</li>
+                        <li>Отмена возможна не менее чем за 24 часа до начала игры</li>
+                        <li>При опоздании более чем на 30 минут бронь аннулируется</li>
+                        <li>Размер депозита: {% if court.is_free %}0₽{% else %}30% от стоимости{% endif %}</li>
+                        <li>Обязательно наличие спортивной обуви</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Стили для временных слотов -->
+<style>
+    .time-slot {
+        padding: 10px 15px;
+        margin: 5px;
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: center;
+        min-width: 100px;
+    }
+    
+    .time-slot:hover {
+        background-color: #f8f9fa;
+        border-color: #adb5bd;
+    }
+    
+    .time-slot.selected {
+        background-color: #4e54c8;
+        color: white;
+        border-color: #4e54c8;
+    }
+    
+    .time-slot.disabled {
+        background-color: #e9ecef;
+        color: #6c757d;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+    
+    .time-slot.booked {
+        background-color: #dc3545;
+        color: white;
+        cursor: not-allowed;
+    }
+</style>
+
+<!-- JavaScript для динамического обновления -->
+<script>
+    // Динамическое обновление стоимости
+    document.getElementById('hours').addEventListener('change', updateTotalPrice);
+    document.getElementById('booking_date').addEventListener('change', loadTimeSlots);
+    
+    function updateTotalPrice() {
+        const hours = parseInt(document.getElementById('hours').value);
+        const hourPrice = {{ court.price_per_hour }};
+        const total = hours * hourPrice;
+        document.getElementById('totalPrice').textContent = total + '₽';
+    }
+    
+    // Загрузка доступных временных слотов
+    async function loadTimeSlots() {
+        const date = document.getElementById('booking_date').value;
+        if (!date) return;
+        
+        const container = document.getElementById('timeSlotsContainer');
+        container.innerHTML = `
+            <div class="text-center py-3">
+                <i class="fas fa-spinner fa-spin fa-2x"></i>
+                <p class="mt-2">Загрузка доступного времени...</p>
+            </div>
+        `;
+        
+        try {
+            const response = await fetch(`/api/time-slots/?court_id={{ court.id }}&date=${date}`);
+            const slots = await response.json();
+            
+            if (slots.length === 0) {
+                container.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        На выбранную дату нет доступных слотов
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '<div class="d-flex flex-wrap justify-content-center">';
+            slots.forEach(slot => {
+                const isBooked = slot.is_booked;
+                const isDisabled = slot.disabled;
+                const timeClass = isBooked ? 'booked' : (isDisabled ? 'disabled' : 'available');
+                
+                html += `
+                    <div class="time-slot ${timeClass}" 
+                         data-time="${slot.start_time}"
+                         onclick="${!isBooked && !isDisabled ? 'selectTimeSlot(this)' : ''}">
+                        <div class="fw-bold">${slot.start_time}</div>
+                        <small>${isBooked ? 'Занято' : 'Свободно'}</small>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            container.innerHTML = html;
+            
+        } catch (error) {
+            console.error('Ошибка загрузки слотов:', error);
+            container.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    Ошибка загрузки. Попробуйте обновить страницу.
+                </div>
+            `;
+        }
+    }
+    
+    // Выбор временного слота
+    function selectTimeSlot(element) {
+        document.querySelectorAll('.time-slot').forEach(slot => {
+            slot.classList.remove('selected');
+        });
+        element.classList.add('selected');
+        
+        // Устанавливаем время начала
+        const selectedTime = element.getAttribute('data-time');
+        document.querySelector('input[name="start_time"]').value = selectedTime;
+        
+        // Обновляем стоимость
+        updateTotalPrice();
+    }
+    
+    // Инициализация
+    document.addEventListener('DOMContentLoaded', function() {
+        updateTotalPrice();
+        
+        // Устанавливаем минимальную и максимальную дату
+        const today = new Date().toISOString().split('T')[0];
+        const maxDate = new Date();
+        maxDate.setDate(maxDate.getDate() + {{ court.advance_booking_days }});
+        const maxDateStr = maxDate.toISOString().split('T')[0];
+        
+        document.getElementById('booking_date').setAttribute('min', today);
+        document.getElementById('booking_date').setAttribute('max', maxDateStr);
+    });
+</script>
+{% endblock %}

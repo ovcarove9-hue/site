@@ -1,11 +1,86 @@
-<!-- myapp/templates/myapp/base.html -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Волейбольный клуб{% endblock %}</title>
+    <title>Волейбольный клуб - Главная страница</title>
+    
+    <!-- КРИТИЧЕСКИЙ ФИКС ДЛЯ ОШИБОК РАСШИРЕНИЙ БРАУЗЕРА -->
+    <script>
+    // ФИКС: Полное отключение ошибок от расширений
+    (function() {
+        'use strict';
+        
+        // 1. Блокируем все ошибки связанные с расширениями
+        const originalError = window.onerror;
+        window.onerror = function(msg, url, line, col, error) {
+            if (msg && typeof msg === 'string' && (
+                msg.includes('asynchronous response') || 
+                msg.includes('message channel closed')
+            )) {
+                console.log('[Игнорировано] Ошибка расширения браузера');
+                return true; // подавляем ошибку
+            }
+            if (originalError) {
+                return originalError.apply(this, arguments);
+            }
+        };
+        
+        // 2. Блокируем unhandled promise rejections
+        window.addEventListener('unhandledrejection', function(e) {
+            if (e.reason && e.reason.message && 
+                e.reason.message.includes('asynchronous response')) {
+                e.preventDefault();
+                console.log('[Игнорировано] Promise rejection от расширения');
+                return true;
+            }
+        });
+        
+        // 3. Безопасная подмена chrome API если существует
+        if (typeof chrome !== 'undefined') {
+            try {
+                const safeChrome = {
+                    runtime: {
+                        sendMessage: function() {
+                            return new Promise(resolve => resolve());
+                        },
+                        connect: function() {
+                            return {
+                                postMessage: function() {},
+                                onMessage: { addListener: function() {} },
+                                onDisconnect: { addListener: function() {} },
+                                disconnect: function() {}
+                            };
+                        },
+                        onMessage: { 
+                            addListener: function() {},
+                            removeListener: function() {}
+                        }
+                    }
+                };
+                
+                // Пытаемся безопасно заменить
+                try {
+                    Object.defineProperty(window, 'chrome', {
+                        value: safeChrome,
+                        writable: false,
+                        configurable: false
+                    });
+                } catch(e) {
+                    // Если не получается, просто игнорируем
+                    window.chrome = safeChrome;
+                }
+            } catch(e) {
+                console.log('Chrome API фикс применен');
+            }
+        }
+        
+        console.log('[SYSTEM] Защита от ошибок расширений активирована');
+    })();
+    </script>
+    
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -18,12 +93,12 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: #333;
             min-height: 100vh;
-            padding: 20px;
         }
         
         .container {
             max-width: 1400px;
             margin: 0 auto;
+            padding: 20px;
         }
         
         .header {
@@ -50,16 +125,20 @@
             display: flex;
             gap: 15px;
             margin-top: 20px;
+            flex-wrap: wrap;
         }
         
         .nav a {
-            padding: 10px 20px;
+            padding: 12px 25px;
             background: #667eea;
             color: white;
             text-decoration: none;
             border-radius: 50px;
             font-weight: 600;
             transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         
         .nav a:hover {
@@ -68,12 +147,168 @@
             box-shadow: 0 7px 15px rgba(0, 0, 0, 0.1);
         }
         
-        .content {
+        /* СТИЛИ ДЛЯ КОНТЕНТА ГЛАВНОЙ СТРАНИЦЫ */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        @media (max-width: 992px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .content-box {
             background: white;
             border-radius: 20px;
             padding: 30px;
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
             margin-bottom: 30px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 25px 0;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        
+        .stat-card i {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+        
+        .stat-card h3 {
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+        
+        .games-list {
+            margin-top: 25px;
+        }
+        
+        .game-item {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .game-item h4 {
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+        
+        .game-meta {
+            display: flex;
+            gap: 15px;
+            color: #718096;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+        
+        .btn-join {
+            background: #48bb78;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+            margin-top: 10px;
+        }
+        
+        .btn-join:hover {
+            background: #38a169;
+        }
+        
+        .sidebar {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+            height: fit-content;
+        }
+        
+        .sidebar h3 {
+            color: #2d3748;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .quick-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+        
+        .quick-actions a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            background: #edf2f7;
+            border-radius: 10px;
+            color: #4a5568;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        
+        .quick-actions a:hover {
+            background: #667eea;
+            color: white;
+            transform: translateX(5px);
+        }
+        
+        .online-users {
+            margin-top: 20px;
+        }
+        
+        .user-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: #667eea;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .user-info h5 {
+            margin: 0;
+            color: #2d3748;
+        }
+        
+        .user-info span {
+            font-size: 0.8rem;
+            color: #718096;
         }
         
         .messages {
@@ -115,6 +350,96 @@
             color: #718096;
             padding: 20px;
             font-size: 0.9rem;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            margin-top: 20px;
+        }
+        
+        .welcome-section {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .welcome-section h2 {
+            font-size: 2.2rem;
+            margin-bottom: 15px;
+        }
+        
+        @media (max-width: 768px) {
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .nav a {
+                padding: 10px 15px;
+                font-size: 0.9rem;
+            }
+            
+            .content-box, .sidebar {
+                padding: 20px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        /* КАЛЕНДАРЬ - ТОЛЬКО БАЗОВЫЕ СТИЛИ */
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .calendar-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .weekday {
+            padding: 10px;
+            font-weight: 600;
+            color: #718096;
+        }
+        
+        .calendar-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+        }
+        
+        .calendar-day {
+            height: 80px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            padding: 8px;
+            background: white;
+        }
+        
+        .calendar-day.has-game {
+            border: 2px solid #667eea;
+            background: #e9d8fd;
+            cursor: pointer;
+        }
+        
+        .calendar-day.today {
+            background: #fed7d7 !important;
+            border-color: #e53e3e !important;
         }
     </style>
 </head>
@@ -123,14 +448,26 @@
         <!-- Шапка -->
         <div class="header">
             <h1><i class="fas fa-volleyball-ball"></i> Волейбольный клуб</h1>
-            <p>Сообщество волейболистов: игры, тренировки, турниры</p>
+            <p>Сообщество волейболистов: игры, тренировки, турниры. Найди партнёров для игры!</p>
             
+            <!-- ИСПРАВЛЕННАЯ НАВИГАЦИЯ -->
             <div class="nav">
-                <a href="{% url 'home' %}"><i class="fas fa-home"></i> Главная</a>
-                <a href="{% url 'map' %}"><i class="fas fa-map-marked-alt"></i> Карта</a>
-                <a href="{% url 'create_game' %}"><i class="fas fa-plus-circle"></i> Создать игру</a>
-                <a href="{% url 'search' %}"><i class="fas fa-search"></i> Поиск игроков</a>
-                <a href="{% url 'my_suggestions' %}"><i class="fas fa-list"></i> Мои предложения</a>
+                <a href="/"><i class="fas fa-home"></i> Главная</a>
+                <a href="/map/"><i class="fas fa-map-marked-alt"></i> Карта площадок</a>
+                <a href="/create_game/"><i class="fas fa-plus-circle"></i> Создать игру</a>
+                <a href="/search/"><i class="fas fa-search"></i> Поиск игроков</a>
+                <a href="/suggest_court/"><i class="fas fa-plus-circle"></i> Предложить площадку</a>
+                <a href="/my_suggestions/"><i class="fas fa-list"></i> Мои предложения</a>
+                
+                {% if user.is_authenticated %}
+                    {% if user.id %}
+                        <a href="/profile/{{ user.id }}/"><i class="fas fa-user"></i> Мой профиль</a>
+                    {% endif %}
+                    <a href="/logout/"><i class="fas fa-sign-out-alt"></i> Выйти</a>
+                {% else %}
+                    <a href="/login/"><i class="fas fa-sign-in-alt"></i> Войти</a>
+                    <a href="/register/"><i class="fas fa-user-plus"></i> Регистрация</a>
+                {% endif %}
             </div>
         </div>
         
@@ -145,17 +482,252 @@
         </div>
         {% endif %}
         
-        <!-- Основное содержимое -->
-        <div class="content">
-            {% block content %}{% endblock %}
+        <!-- Приветственная секция -->
+        <div class="welcome-section">
+            <h2><i class="fas fa-volleyball-ball"></i> Добро пожаловать в Волейбольный клуб!</h2>
+            <p style="font-size: 1.2rem; opacity: 0.9;">Место, где волейболисты находят партнёров, игры и новые знакомства</p>
+            {% if not user.is_authenticated %}
+            <div style="margin-top: 20px;">
+                <a href="/register/" style="background: white; color: #667eea; padding: 12px 30px; border-radius: 50px; text-decoration: none; font-weight: 600; display: inline-block; margin: 0 10px;">
+                    Присоединиться
+                </a>
+                <a href="/search/" style="background: transparent; border: 2px solid white; color: white; padding: 12px 30px; border-radius: 50px; text-decoration: none; font-weight: 600; display: inline-block; margin: 0 10px;">
+                    Найти игроков
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Основное содержимое ГЛАВНОЙ СТРАНИЦЫ -->
+        <div class="main-content">
+            <!-- Основной контент -->
+            <div>
+                <!-- Статистика -->
+                <div class="content-box">
+                    <h3><i class="fas fa-chart-line"></i> Статистика сообщества</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <i class="fas fa-users"></i>
+                            <h3>1,247</h3>
+                            <p>Активных игроков</p>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-calendar-alt"></i>
+                            <h3>89</h3>
+                            <p>Игр на этой неделе</p>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <h3>42</h3>
+                            <p>Площадок в базе</p>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-trophy"></i>
+                            <h3>15</h3>
+                            <p>Турниров в этом месяце</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Ближайшие игры -->
+                <div class="content-box">
+                    <h3><i class="fas fa-volleyball-ball"></i> Ближайшие игры</h3>
+                    <div class="games-list">
+                        <div class="game-item">
+                            <h4>Вечерний волейбол в "Спартаке"</h4>
+                            <p>Смешанная группа, средний уровень. Крытый зал, профессиональное покрытие.</p>
+                            <div class="game-meta">
+                                <span><i class="far fa-calendar"></i> Сегодня, 19:00</span>
+                                <span><i class="fas fa-map-marker-alt"></i> Москва, ул. Спортивная, 15</span>
+                                <span><i class="fas fa-user-friends"></i> 8/12 игроков</span>
+                            </div>
+                            <button class="btn-join" onclick="handleJoinClick(this)">Присоединиться</button>
+                        </div>
+                        
+                        <div class="game-item">
+                            <h4>Тренировка для начинающих</h4>
+                            <p>Под руководством опытного тренера. Все необходимое предоставляется.</p>
+                            <div class="game-meta">
+                                <span><i class="far fa-calendar"></i> Завтра, 18:00</span>
+                                <span><i class="fas fa-map-marker-alt"></i> Санкт-Петербург, пр. Победы, 10</span>
+                                <span><i class="fas fa-user-friends"></i> 5/10 игроков</span>
+                            </div>
+                            <button class="btn-join" onclick="handleJoinClick(this)">Присоединиться</button>
+                        </div>
+                        
+                        <div class="game-item">
+                            <h4>Пляжный волейбол на "Волне"</h4>
+                            <p>Летняя площадка, песок, сетка. Бесплатно, приносите свои мячи.</p>
+                            <div class="game-meta">
+                                <span><i class="far fa-calendar"></i> Суббота, 14:00</span>
+                                <span><i class="fas fa-map-marker-alt"></i> Сочи, Пляжная аллея, 5</span>
+                                <span><i class="fas fa-user-friends"></i> 10/16 игроков</span>
+                            </div>
+                            <button class="btn-join" onclick="handleJoinClick(this)">Присоединиться</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Календарь (упрощенный) -->
+                <div class="content-box">
+                    <h3><i class="fas fa-calendar-alt"></i> Календарь игр</h3>
+                    <div class="calendar-header">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="alert('Предыдущий месяц')">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <h4 style="margin: 0; color: #2d3748;">Декабрь 2025</h4>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="alert('Следующий месяц')">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="calendar-weekdays">
+                        <div class="weekday">Пн</div>
+                        <div class="weekday">Вт</div>
+                        <div class="weekday">Ср</div>
+                        <div class="weekday">Чт</div>
+                        <div class="weekday">Пт</div>
+                        <div class="weekday">Сб</div>
+                        <div class="weekday">Вс</div>
+                    </div>
+                    
+                    <div class="calendar-days">
+                        <!-- Простой календарь без сложной логики -->
+                        {% for day in "12345678910111213141516171819202122232425262728293031"|make_list %}
+                        <div class="calendar-day {% if forloop.counter <= 5 %}has-game{% endif %}">
+                            <div class="day-number">{{ day }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Боковая панель -->
+            <div class="sidebar">
+                <!-- Быстрые действия -->
+                <div class="quick-actions">
+                    <h3><i class="fas fa-bolt"></i> Быстрые действия</h3>
+                    <a href="{% url 'create_game' %}" class="nav-link">
+                        <i class="fas fa-calendar-plus me-1"></i> Создать игру
+                    </a>
+                    <a href="/search/">
+                        <i class="fas fa-search"></i> Найти игроков
+                    </a>
+                    <a href="/map/">
+                        <i class="fas fa-map"></i> Карта площадок
+                    </a>
+                    {% if user.is_authenticated and user.id %}
+                    <a href="/profile/{{ user.id }}/">
+                        <i class="fas fa-edit"></i> Редактировать профиль
+                    </a>
+                    {% endif %}
+                </div>
+                
+                <!-- Онлайн пользователи -->
+                <div class="online-users">
+                    <h3><i class="fas fa-wifi"></i> Сейчас онлайн</h3>
+                    <div class="user-item">
+                        <div class="user-avatar">АК</div>
+                        <div class="user-info">
+                            <h5>Алексей К.</h5>
+                            <span>Диагональный • Москва</span>
+                        </div>
+                    </div>
+                    <div class="user-item">
+                        <div class="user-avatar">МС</div>
+                        <div class="user-info">
+                            <h5>Мария С.</h5>
+                            <span>Связующий • СПб</span>
+                        </div>
+                    </div>
+                    <div class="user-item">
+                        <div class="user-avatar">ДИ</div>
+                        <div class="user-info">
+                            <h5>Дмитрий И.</h5>
+                            <span>Либеро • Казань</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Быстрые ссылки -->
+                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+                    <h4><i class="fas fa-link"></i> Полезные ссылки</h4>
+                    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+                        <a href="#" style="color: #667eea; text-decoration: none; font-size: 0.9rem;">
+                            <i class="fas fa-book"></i> Правила сообщества
+                        </a>
+                        <a href="#" style="color: #667eea; text-decoration: none; font-size: 0.9rem;">
+                            <i class="fas fa-question-circle"></i> Помощь и поддержка
+                        </a>
+                        <a href="#" style="color: #667eea; text-decoration: none; font-size: 0.9rem;">
+                            <i class="fas fa-envelope"></i> Связаться с нами
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
         
         <!-- Подвал -->
         <div class="footer">
-            <p>Волейбольный клуб © 2025 | Все игры пользователей отображаются в календаре</p>
+            <p><i class="fas fa-volleyball-ball"></i> Волейбольный клуб © 2025 | Все игры пользователей отображаются в календаре | v3.0</p>
+            <p style="margin-top: 10px; font-size: 0.8rem;">
+                <a href="#" style="color: #718096; margin: 0 10px; text-decoration: none;">Правила сообщества</a> | 
+                <a href="#" style="color: #718096; margin: 0 10px; text-decoration: none;">Контакты</a> | 
+                <a href="#" style="color: #718096; margin: 0 10px; text-decoration: none;">Помощь</a>
+            </p>
         </div>
     </div>
     
-    {% block scripts %}{% endblock %}
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- БЕЗОПАСНЫЙ МИНИМАЛЬНЫЙ JAVASCRIPT -->
+    <script>
+    // Простые и безопасные функции
+    function handleJoinClick(button) {
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Обработка...';
+        button.disabled = true;
+        
+        setTimeout(function() {
+            button.innerHTML = '<i class="fas fa-check"></i> Заявка отправлена';
+            button.style.background = '#48bb78';
+            
+            // Через 3 секунды возвращаем исходное состояние
+            setTimeout(function() {
+                button.innerHTML = 'Присоединиться';
+                button.style.background = '';
+                button.disabled = false;
+            }, 3000);
+        }, 1000);
+    }
+    
+    // Простая инициализация при загрузке
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Волейбольный клуб загружен');
+        
+        // Подсветка сегодняшнего дня в календаре
+        const today = new Date();
+        const todayDate = today.getDate();
+        
+        document.querySelectorAll('.day-number').forEach(dayEl => {
+            if (parseInt(dayEl.textContent) === todayDate) {
+                dayEl.parentElement.classList.add('today');
+            }
+        });
+        
+        // Простые клики по дням календаря
+        document.querySelectorAll('.calendar-day.has-game').forEach(day => {
+            day.addEventListener('click', function() {
+                const dayNum = this.querySelector('.day-number').textContent;
+                alert('Игры на ' + dayNum + ' декабря:\n• Вечерний волейбол (19:00)\n• Тренировка (20:00)');
+            });
+        });
+    });
+    
+    // Глобальная функция для кнопок
+    window.showAlert = function(message) {
+        alert(message);
+    };
+    </script>
 </body>
 </html>

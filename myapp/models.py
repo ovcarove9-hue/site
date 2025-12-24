@@ -2,322 +2,169 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.http import JsonResponse
-from django.db.models import Q
-import json
-from datetime import datetime, timedelta
-import calendar
-
-@login_required
-def suggest_court_view(request):
-    """Форма для предложения новой площадки"""
-    if request.method == 'POST':
-        form = CourtSuggestionForm(request.POST)
-        coord_form = CourtCoordinatesForm(request.POST)
-        
-        if form.is_valid() and coord_form.is_valid():
-            try:
-                # Создаём площадку
-                court = form.save(commit=False)
-                court.suggested_by = request.user
-                court.status = 'pending'
-                
-                # Добавляем координаты если есть
-                latitude = coord_form.cleaned_data.get('latitude')
-                longitude = coord_form.cleaned_data.get('longitude')
-                if latitude and longitude:
-                    court.latitude = latitude
-                    court.longitude = longitude
-                
-                court.save()
-                
-                messages.success(request, 
-                    '✅ Спасибо! Ваше предложение отправлено на модерацию. '
-                    'Площадка появится на карте после проверки администратором.'
-                )
-                
-                # Отправляем уведомление администраторам (в реальном проекте)
-                # notify_admins_about_new_court(court)
-                
-                return redirect('my_suggestions')
-                
-            except Exception as e:
-                messages.error(request, f'Ошибка при сохранении: {str(e)}')
-        else:
-            messages.error(request, 'Пожалуйста, исправьте ошибки в форме')
-    else:
-        form = CourtSuggestionForm()
-        coord_form = CourtCoordinatesForm()
-    
-    context = {
-        'page_title': 'Предложить новую площадку',
-        'form': form,
-        'coord_form': coord_form,
-    }
-    return render(request, 'myapp/suggest_court.html', context)
-
-def map_view(request):
-    """Карта волейбольных площадок (только одобренные)"""
-    # Получаем только одобренные площадки
-    courts = VolleyballCourt.objects.filter(status='approved', is_verified=True)
-    
-    # Подготавливаем данные для карты
-    courts_data = []
-    for court in courts:
-        court_info = {
-            'id': court.id,
-            'name': court.name,
-            'address': court.address,
-            'city': court.city,
-            'type': court.court_type,
-            'type_display': court.get_court_type_display(),
-            'is_free': court.is_free,
-            'price': float(court.price_per_hour) if court.price_per_hour else 0,
-            'price_display': court.price_display,
-            'rating': float(court.rating) if court.rating else 0,
-            'description': court.description[:100] if court.description else '',
-            'amenities': court.amenities_list,
-            'working_hours': court.working_hours,
-            'phone': court.phone,
-            'website': court.website,
-            'photo_url': court.photo_url,
-        }
-        
-        # Добавляем координаты если они есть
-        if court.latitude and court.longitude:
-            court_info['latitude'] = float(court.latitude)
-            court_info['longitude'] = float(court.longitude)
-            court_info['has_coordinates'] = True
-        else:
-            court_info['has_coordinates'] = False
-        
-        courts_data.append(court_info)
-    
-    # Статистика
-    context = {
-        'page_title': 'Карта волейбольных площадок',
-        'courts': courts,
-        'courts_json': json.dumps(courts_data),
-        'courts_count': courts.count(),
-        'free_courts_count': courts.filter(is_free=True).count(),
-        'indoor_courts_count': courts.filter(court_type='indoor').count(),
-        'outdoor_courts_count': courts.filter(court_type='outdoor').count(),
-        'beach_courts_count': courts.filter(court_type='beach').count(),
-    }
-    
-    return render(request, 'myapp/map.html', context)
-
-@login_required
-def my_suggestions_view(request):
-    """Мои предложенные площадки с разными статусами"""
-    courts = VolleyballCourt.objects.filter(suggested_by=request.user).order_by('-created_at')
-    
-    # Разделяем по статусам
-    pending_courts = courts.filter(status='pending')
-    approved_courts = courts.filter(status='approved')
-    rejected_courts = courts.filter(status='rejected')
-    needs_info_courts = courts.filter(status='needs_info')
-    
-    context = {
-        'page_title': 'Мои предложения площадок',
-        'all_courts': courts,
-        'pending_courts': pending_courts,
-        'approved_courts': approved_courts,
-        'rejected_courts': rejected_courts,
-        'needs_info_courts': needs_info_courts,
-        'total_count': courts.count(),
-        'approved_count': approved_courts.count(),
-        'pending_count': pending_courts.count(),
-    }
-    return render(request, 'myapp/my_suggestions.html', context)
-
-def courts_api_view(request):
-    """API для получения площадок (для карты)"""
-    status = request.GET.get('status', 'approved')
-    
-    try:
-        if status == 'all':
-            courts = VolleyballCourt.objects.all()
-        else:
-            courts = VolleyballCourt.objects.filter(status=status)
-        
-        courts_data = []
-        for court in courts:
-            court_info = {
-                'id': court.id,
-                'name': court.name,
-                'address': court.address,
-                'city': court.city,
-                'type': court.court_type,
-                'status': court.status,
-                'status_display': court.get_status_display(),
-                'is_free': court.is_free,
-                'price': float(court.price_per_hour) if court.price_per_hour else 0,
-                'rating': float(court.rating) if court.rating else 0,
-                'created_at': court.created_at.strftime('%d.%m.%Y'),
-                'suggested_by': court.suggested_by.username if court.suggested_by else 'Неизвестно',
-            }
-            
-            if court.latitude and court.longitude:
-                court_info['latitude'] = float(court.latitude)
-                court_info['longitude'] = float(court.longitude)
-            
-            courts_data.append(court_info)
-        
-        return JsonResponse({
-            'success': True,
-            'courts': courts_data,
-            'count': courts.count(),
-        })
-    
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        })
+from django.core.validators import MinValueValidator, MaxValueValidator
+import uuid
 
 class VolleyballCourt(models.Model):
-    """Модель волейбольной площадки с модерацией"""
-    
-    COURT_TYPE_CHOICES = [
-        ('indoor', '🏠 Крытая'),
-        ('outdoor', '☀️ Открытая'),
-        ('beach', '🏖️ Пляжная'),
-    ]
-    
-    SURFACE_CHOICES = [
-        ('wood', 'Дерево'),
+    SURFACE_TYPES = [
+        ('sand', 'Песок'),
         ('parquet', 'Паркет'),
         ('synthetic', 'Синтетика'),
         ('asphalt', 'Асфальт'),
-        ('sand', 'Песок'),
-        ('grass', 'Трава'),
+        ('grass', 'Газон'),
     ]
     
-    # Статусы для модерации
-    STATUS_CHOICES = [
-        ('pending', '⏳ На рассмотрении'),
-        ('approved', '✅ Одобрена'),
-        ('rejected', '❌ Отклонена'),
+    COURT_TYPES = [
+        ('indoor', 'Закрытый зал'),
+        ('outdoor', 'Открытая площадка'),
+        ('beach', 'Пляж'),
+    ]
+    
+    MODERATION_STATUS = [
+        ('pending', '⏳ На модерации'),
+        ('approved', '✅ Одобрено'),
+        ('rejected', '❌ Отклонено'),
         ('needs_info', '❓ Требует уточнений'),
     ]
     
     # Основная информация
-    name = models.CharField('Название площадки', max_length=200)
-    description = models.TextField('Описание', blank=True)
-    address = models.CharField('Адрес', max_length=300)
-    city = models.CharField('Город', max_length=100)
+    name = models.CharField(max_length=200, verbose_name="Название")
+    city = models.CharField(max_length=100, verbose_name="Город", default="Москва")
+    address = models.CharField(max_length=300, verbose_name="Адрес")
+    description = models.TextField(blank=True, verbose_name="Описание")
     
-    # Координаты (обязательные для карты)
-    latitude = models.DecimalField('Широта', max_digits=9, decimal_places=6, null=True, blank=True)
-    longitude = models.DecimalField('Долгота', max_digits=9, decimal_places=6, null=True, blank=True)
+    # Контакты
+    phone = models.CharField(max_length=20, blank=True, verbose_name="Телефон")
+    email = models.EmailField(blank=True, verbose_name="Email")
+    website = models.URLField(blank=True, verbose_name="Сайт")
     
     # Характеристики
-    court_type = models.CharField('Тип площадки', max_length=20, choices=COURT_TYPE_CHOICES, default='outdoor')
-    surface = models.CharField('Покрытие', max_length=20, choices=SURFACE_CHOICES, default='asphalt')
-    courts_count = models.PositiveIntegerField('Количество площадок', default=1)
+    court_type = models.CharField(
+        max_length=20, 
+        choices=COURT_TYPES, 
+        default='outdoor', 
+        verbose_name="Тип площадки"
+    )
+    surface = models.CharField(
+        max_length=20, 
+        choices=SURFACE_TYPES, 
+        default='synthetic', 
+        verbose_name="Покрытие"
+    )
+    courts_count = models.PositiveIntegerField(default=1, verbose_name="Количество площадок")
     
-    # Размеры
-    length = models.DecimalField('Длина (м)', max_digits=4, decimal_places=1, default=18.0, null=True, blank=True)
-    width = models.DecimalField('Ширина (м)', max_digits=4, decimal_places=1, default=9.0, null=True, blank=True)
+    # Модерация
+    status = models.CharField(
+        max_length=20,
+        choices=MODERATION_STATUS,
+        default='pending',
+        verbose_name='Статус модерации'
+    )
     
-    # Удобства
-    is_free = models.BooleanField('Бесплатная', default=False)
-    is_lighted = models.BooleanField('Есть освещение', default=False)
-    has_showers = models.BooleanField('Есть душ', default=False)
-    has_locker_rooms = models.BooleanField('Есть раздевалки', default=False)
-    has_equipment_rental = models.BooleanField('Аренда инвентаря', default=False)
-    has_bleachers = models.BooleanField('Есть трибуны', default=False)
-    has_parking = models.BooleanField('Есть парковка', default=False)
-    has_cafe = models.BooleanField('Есть кафе/буфет', default=False)
-    
-    # Стоимость
-    price_per_hour = models.DecimalField('Цена за час (руб)', max_digits=8, decimal_places=2, default=0)
-    price_details = models.TextField('Детали оплаты', blank=True, help_text="Например: студентам скидка 50%")
-    
-    # Контактная информация
-    phone = models.CharField('Телефон', max_length=20, blank=True)
-    website = models.URLField('Сайт', blank=True)
-    email = models.EmailField('Email', blank=True)
-    
-    # Время работы
-    opening_time = models.TimeField('Время открытия', default='08:00')
-    closing_time = models.TimeField('Время закрытия', default='22:00')
-    working_days = models.CharField('Дни работы', max_length=100, default='Пн-Вс', 
-                                    help_text="Например: Пн-Пт 8:00-22:00, Сб-Вс 9:00-20:00")
-    
-    # Статус модерации
-    status = models.CharField('Статус', max_length=20, choices=STATUS_CHOICES, default='pending')
-    is_verified = models.BooleanField('Проверена администрацией', default=False)
-    rejection_reason = models.TextField('Причина отклонения', blank=True, 
-                                       help_text="Заполняется при отклонении заявки")
-    
-    # Рейтинг
-    rating = models.DecimalField('Рейтинг', max_digits=3, decimal_places=1, default=0)
-    total_reviews = models.PositiveIntegerField('Количество отзывов', default=0)
-    
-    # Кто предложил
     suggested_by = models.ForeignKey(
-        User, 
-        on_delete=models.SET_NULL, 
-        null=True, 
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         verbose_name='Предложил',
         related_name='suggested_courts'
     )
     
-    # Кто проверил (модератор)
-    verified_by = models.ForeignKey(
-        User, 
-        on_delete=models.SET_NULL, 
-        null=True, 
+    reviewed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
         blank=True,
         verbose_name='Проверил',
-        related_name='verified_courts'
+        related_name='reviewed_courts'
     )
     
-    # Даты
-    created_at = models.DateTimeField('Дата создания', auto_now_add=True)
-    updated_at = models.DateTimeField('Дата обновления', auto_now=True)
-    verified_at = models.DateTimeField('Дата проверки', null=True, blank=True)
+    reviewed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Дата проверки'
+    )
     
-    # Теги для поиска
-    tags = models.CharField('Теги', max_length=300, blank=True, 
-                           help_text="Через запятую: волейбол, спорт, площадка, турниры")
+    moderator_comment = models.TextField(
+        blank=True,
+        verbose_name='Комментарий модератора'
+    )
     
-    # Фотографии (в реальном проекте сделайте отдельную модель для фото)
-    photo_url = models.URLField('Ссылка на фото', blank=True, 
-                               help_text="Ссылка на фото площадки (можно загрузить на imgur.com)")
+    # Время работы
+    opening_time = models.TimeField(default='08:00:00', verbose_name="Время открытия")
+    closing_time = models.TimeField(default='22:00:00', verbose_name="Время закрытия")
+    working_days = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name="Дни работы",
+        default="Пн-Вс"
+    )
+    
+    # Удобства
+    is_lighted = models.BooleanField(default=False, verbose_name="Есть освещение")
+    has_parking = models.BooleanField(default=False, verbose_name="Есть парковка")
+    has_showers = models.BooleanField(default=False, verbose_name="Есть душ")
+    has_locker_rooms = models.BooleanField(default=False, verbose_name="Есть раздевалки")
+    has_equipment_rental = models.BooleanField(default=False, verbose_name="Прокат инвентаря")
+    has_cafe = models.BooleanField(default=False, verbose_name="Есть кафе")
+    
+    # Цены
+    is_free = models.BooleanField(default=False, verbose_name="Бесплатно")
+    price_per_hour = models.DecimalField(
+        max_digits=8, 
+        decimal_places=2, 
+        default=0, 
+        verbose_name="Цена за час (руб.)"
+    )
+    price_details = models.TextField(blank=True, verbose_name="Подробнее о ценах")
+    
+    # Теги
+    tags = models.CharField(max_length=200, blank=True, verbose_name="Теги")
+    
+    # Фото
+    photo_url = models.URLField(blank=True, verbose_name="Ссылка на фото")
+    
+    # Координаты
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, verbose_name="Широта")
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, verbose_name="Долгота")
+    
+    is_verified = models.BooleanField(default=False, verbose_name="Проверено")
+    rating = models.DecimalField(max_digits=3, decimal_places=1, default=0, verbose_name="Рейтинг")
+    
+    # Поля для бронирования
+    booking_enabled = models.BooleanField(default=True, verbose_name="Бронирование доступно")
+    min_booking_hours = models.PositiveIntegerField(default=1, verbose_name="Минимальное время брони (часы)")
+    max_booking_hours = models.PositiveIntegerField(default=3, verbose_name="Максимальное время брони (часы)")
+    advance_booking_days = models.PositiveIntegerField(default=14, verbose_name="Макс. дней для бронирования вперед")
+    
+    # Технические поля
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True, verbose_name="Активна")
     
     class Meta:
-        verbose_name = 'Волейбольная площадка'
-        verbose_name_plural = 'Волейбольные площадки'
-        ordering = ['-created_at', 'status']
-        indexes = [
-            models.Index(fields=['status', 'city']),
-            models.Index(fields=['is_free', 'is_lighted']),
-            models.Index(fields=['rating']),
-        ]
+        ordering = ['city', 'name']
+        verbose_name = "Волейбольная площадка"
+        verbose_name_plural = "Волейбольные площадки"
     
     def __str__(self):
-        status_icon = {
-            'pending': '⏳',
-            'approved': '✅',
-            'rejected': '❌',
-            'needs_info': '❓',
-        }.get(self.status, '')
-        return f"{status_icon} {self.name} ({self.city}) - {self.get_status_display()}"
+        return f"{self.name} ({self.city})"
     
     @property
-    def is_visible_on_map(self):
-        """Видна ли площадка на карте"""
-        return self.status == 'approved' and self.is_verified
+    def amenities_list(self):
+        """Список удобств"""
+        amenities = []
+        if self.is_lighted: amenities.append("Освещение")
+        if self.has_parking: amenities.append("Парковка")
+        if self.has_showers: amenities.append("Душ")
+        if self.has_locker_rooms: amenities.append("Раздевалки")
+        if self.has_equipment_rental: amenities.append("Прокат инвентаря")
+        if self.has_cafe: amenities.append("Кафе")
+        return amenities
     
     @property
     def working_hours(self):
-        """Форматированное время работы"""
+        """Время работы в читаемом формате"""
         return f"{self.opening_time.strftime('%H:%M')} - {self.closing_time.strftime('%H:%M')}"
     
     @property
@@ -326,245 +173,450 @@ class VolleyballCourt(models.Model):
         if self.is_free:
             return "Бесплатно"
         elif self.price_per_hour > 0:
-            return f"{self.price_per_hour} руб/час"
-        return "Цена не указана"
+            return f"{self.price_per_hour} руб./час"
+        else:
+            return "Цена не указана"
     
-    @property
-    def amenities_list(self):
-        """Список удобств"""
-        amenities = []
-        if self.is_lighted:
-            amenities.append("Освещение")
-        if self.has_showers:
-            amenities.append("Душ")
-        if self.has_locker_rooms:
-            amenities.append("Раздевалки")
-        if self.has_equipment_rental:
-            amenities.append("Аренда инвентаря")
-        if self.has_parking:
-            amenities.append("Парковка")
-        if self.has_cafe:
-            amenities.append("Кафе")
-        return amenities
+    def can_be_viewed_by(self, user):
+        """Кто может видеть эту площадку"""
+        if self.status == 'approved' and self.is_active:
+            return True
+        if user.is_superuser:
+            return True
+        if self.suggested_by == user:
+            return True
+        return False
     
-    def approve(self, moderator):
+    def approve(self, user, comment=''):
         """Одобрить площадку"""
         self.status = 'approved'
+        self.reviewed_by = user
+        self.reviewed_at = timezone.now()
+        self.moderator_comment = comment
         self.is_verified = True
-        self.verified_by = moderator
-        self.verified_at = timezone.now()
         self.save()
-    
-    def reject(self, moderator, reason):
+        
+    def reject(self, user, comment=''):
         """Отклонить площадку"""
         self.status = 'rejected'
-        self.rejection_reason = reason
-        self.verified_by = moderator
-        self.verified_at = timezone.now()
+        self.reviewed_by = user
+        self.reviewed_at = timezone.now()
+        self.moderator_comment = comment
         self.save()
-    
-    def request_info(self, moderator):
+        
+    def request_info(self, user, comment=''):
         """Запросить дополнительную информацию"""
         self.status = 'needs_info'
-        self.verified_by = moderator
-        self.verified_at = timezone.now()
+        self.reviewed_by = user
+        self.reviewed_at = timezone.now()
+        self.moderator_comment = comment
         self.save()
 
-class Location(models.Model):
-    """Модель для локаций/спорткомплексов"""
-    
-    TYPE_CHOICES = [
-        ('sport_complex', 'Спорткомплекс'),
-        ('stadium', 'Стадион'),
-        ('park', 'Парк'),
-        ('beach', 'Пляж'),
-        ('school', 'Школа/ВУЗ'),
-        ('other', 'Другое'),
-    ]
-    
-    name = models.CharField('Название', max_length=200)
-    location_type = models.CharField('Тип', max_length=20, choices=TYPE_CHOICES, default='sport_complex')
-    description = models.TextField('Описание', blank=True)
-    address = models.CharField('Адрес', max_length=300)
-    city = models.CharField('Город', max_length=100)
-    
-    # Контактная информация
-    phone = models.CharField('Телефон', max_length=20, blank=True)
-    website = models.URLField('Сайт', blank=True)
-    email = models.EmailField('Email', blank=True)
-    
-    # Координаты
-    latitude = models.DecimalField('Широта', max_digits=9, decimal_places=6, null=True, blank=True)
-    longitude = models.DecimalField('Долгота', max_digits=9, decimal_places=6, null=True, blank=True)
-    
-    # Удобства
-    has_parking = models.BooleanField('Есть парковка', default=False)
-    has_locker_rooms = models.BooleanField('Есть раздевалки', default=False)
-    has_showers = models.BooleanField('Есть душ', default=False)
-    has_cafe = models.BooleanField('Есть кафе', default=False)
-    is_lighted = models.BooleanField('Есть освещение', default=False)
-    
-    # Время работы
-    opening_time = models.TimeField('Время открытия', default='08:00')
-    closing_time = models.TimeField('Время закрытия', default='22:00')
-    
-    # Статус
-    is_active = models.BooleanField('Активен', default=True)
-    rating = models.DecimalField('Рейтинг', max_digits=3, decimal_places=1, default=0)
-    
-    # Кто добавил
-    added_by = models.ForeignKey(
-        User, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True,
-        verbose_name='Добавил',
-        related_name='added_locations'
-    )
-    
-    # Даты
-    created_at = models.DateTimeField('Дата добавления', auto_now_add=True)
-    updated_at = models.DateTimeField('Дата обновления', auto_now=True)
+class CourtPhoto(models.Model):
+    """Фотографии площадок"""
+    court = models.ForeignKey(VolleyballCourt, on_delete=models.CASCADE, 
+                             related_name='photos')
+    photo = models.ImageField('Фото', upload_to='court_photos/')
+    uploaded_at = models.DateTimeField('Дата загрузки', auto_now_add=True)
+    is_main = models.BooleanField('Главное фото', default=False)
     
     class Meta:
-        verbose_name = 'Локация'
-        verbose_name_plural = 'Локации'
-        ordering = ['city', 'name']
+        verbose_name = 'Фото площадки'
+        verbose_name_plural = 'Фото площадок'
     
     def __str__(self):
-        return f"{self.name}, {self.city}"
+        return f"Фото для {self.court.name}"
 
 class Game(models.Model):
-    """Модель волейбольной игры/события"""
-    
-    TYPE_CHOICES = [
-        ('training', 'Тренировка'),
-        ('game', 'Свободная игра'),
-        ('tournament', 'Турнир'),
-        ('match', 'Товарищеский матч'),
-        ('sparring', 'Спарринг'),
+    GAME_TYPES = [
+        ('beach', 'Пляжный волейбол (2x2)'),
+        ('indoor', 'Зал (классика 6x6)'),
+        ('mini', 'Мини-волейбол (4x4)'),
+        ('mixed', 'Микст (смешанные команды)'),
+        ('training', 'Тренировка/разминка'),
+        ('tournament', 'Турнирная игра'),
     ]
     
-    LEVEL_CHOICES = [
-        ('any', 'Любой'),
+    SKILL_LEVELS = [
+        ('any', 'Любой уровень'),
         ('beginner', 'Начинающий'),
-        ('intermediate', 'Любитель'),
+        ('intermediate', 'Средний'),
         ('advanced', 'Продвинутый'),
-        ('professional', 'Профессионал'),
+        ('pro', 'Профессиональный'),
     ]
     
-    STATUS_CHOICES = [
-        ('active', 'Активна'),
-        ('full', 'Заполнена'),
-        ('cancelled', 'Отменена'),
-        ('completed', 'Завершена'),
+    MEETING_TYPES = [
+        ('training', 'Тренировка'),
+        ('friendly', 'Товарищеская игра'),
+        ('tournament', 'Турнир'),
+        ('other', 'Другое')
     ]
     
-    # Основная информация
-    title = models.CharField('Название игры', max_length=200)
-    game_type = models.CharField('Тип', max_length=20, choices=TYPE_CHOICES, default='game')
-    description = models.TextField('Описание', blank=True)
-    
-    # Время и дата
-    date = models.DateField('Дата игры')
-    start_time = models.TimeField('Время начала')
-    end_time = models.TimeField('Время окончания')
-    duration = models.DecimalField('Продолжительность (часы)', max_digits=3, decimal_places=1, default=2.0)
-    
-    # Место проведения
-    court = models.ForeignKey(
-        VolleyballCourt, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True,
-        verbose_name='Площадка',
-        related_name='games'
+    # Основные поля
+    title = models.CharField(max_length=200, verbose_name="Название игры")
+    organizer = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        verbose_name="Организатор"
     )
-    location_text = models.CharField('Место проведения', max_length=300, blank=True)
+    
+    # Тип игры
+    sport_type = models.CharField(
+        max_length=50, 
+        choices=GAME_TYPES, 
+        verbose_name="Тип игры",
+        default="indoor"
+    )
+    
+    # Тип встречи
+    meeting_type = models.CharField(
+        max_length=50, 
+        choices=MEETING_TYPES,
+        default='friendly',
+        verbose_name="Тип встречи"
+    )
+    
+    # Дата и время
+    game_date = models.DateField(verbose_name="Дата игры")
+    game_time = models.TimeField(verbose_name="Время начала")
+    end_time = models.TimeField(verbose_name="Время окончания", null=True, blank=True)
+    
+    # Местоположение
+    location = models.CharField(
+        max_length=300, 
+        verbose_name="Место проведения",
+        default="Не указано"
+    )
+    custom_location = models.CharField(
+        max_length=300,
+        blank=True,
+        verbose_name="Другое место"
+    )
+    
+    # Площадка
+    court = models.ForeignKey(
+        VolleyballCourt,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Выбранная площадка"
+    )
+    
+    # Описание
+    description = models.TextField(blank=True, verbose_name="Описание")
     
     # Участники
-    max_players = models.PositiveIntegerField('Максимум игроков', default=12)
-    min_skill_level = models.CharField('Минимальный уровень', max_length=20, choices=LEVEL_CHOICES, default='any')
-    game_format = models.CharField('Формат', max_length=20, default='6v6')
-    
-    # Организатор и участники
-    created_by = models.ForeignKey(
-        User, 
-        on_delete=models.CASCADE,
-        verbose_name='Организатор',
-        related_name='organized_games'
+    min_players = models.PositiveIntegerField(
+        default=4,
+        verbose_name="Минимальное количество игроков"
     )
-    participants = models.ManyToManyField(
-        User,
-        verbose_name='Участники',
-        related_name='participating_games',
+    
+    max_players = models.PositiveIntegerField(
+        default=12,
+        verbose_name="Максимальное количество игроков"
+    )
+    
+    # Уровень и статус
+    skill_level = models.CharField(
+        max_length=50, 
+        choices=SKILL_LEVELS, 
+        default='intermediate', 
+        verbose_name="Уровень"
+    )
+    
+    price = models.DecimalField(
+        max_digits=8, 
+        decimal_places=2,
+        default=0,
+        verbose_name="Стоимость участия (руб.)",
+        null=True,
         blank=True
     )
     
-    # Стоимость
-    price_type = models.CharField('Тип оплаты', max_length=20, default='free',
-                                  choices=[('free', 'Бесплатно'), ('split', 'Сбор'), ('fixed', 'Фиксированная')])
-    price_per_player = models.DecimalField('Стоимость с игрока', max_digits=8, decimal_places=2, default=0)
+    is_private = models.BooleanField(
+        default=False,
+        verbose_name="Приватная игра"
+    )
     
-    # Статус и системные поля
-    status = models.CharField('Статус', max_length=20, choices=STATUS_CHOICES, default='active')
-    is_public = models.BooleanField('Публичная игра', default=True)
-    requirements = models.TextField('Требования к игрокам', blank=True)
+    # Контактная информация
+    contact_name = models.CharField(
+        max_length=100, 
+        verbose_name="Контактное лицо",
+        blank=True,
+        default="Не указано"
+    )
     
-    # Даты
-    created_at = models.DateTimeField('Дата создания', auto_now_add=True)
-    updated_at = models.DateTimeField('Дата обновления', auto_now=True)
+    contact_phone = models.CharField(
+        max_length=20, 
+        blank=True, 
+        verbose_name="Телефон"
+    )
+    
+    # Технические поля
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True, verbose_name="Активна")
+    
+    # Участники
+    participants = models.ManyToManyField(
+        User,
+        related_name='games_joined',
+        blank=True,
+        verbose_name="Участники"
+    )
     
     class Meta:
-        verbose_name = 'Игра'
-        verbose_name_plural = 'Игры'
+        ordering = ['game_date', 'game_time']
+    
+    def __str__(self):
+        return f"{self.title} ({self.game_date})"
+    
+    def current_players_count(self):
+        """Количество участников, записавшихся на игру"""
+        return self.participants.count()
+    
+    def is_full(self):
+        """Проверка, заполнена ли игра"""
+        return self.participants.count() >= self.max_players
+    
+    def spots_left(self):
+        """Сколько мест осталось"""
+        return max(0, self.max_players - self.participants.count())
+
+class CourtBooking(models.Model):
+    """Бронирование площадок"""
+    STATUS_CHOICES = [
+        ('pending', '⏳ Ожидает подтверждения'),
+        ('confirmed', '✅ Подтверждено'),
+        ('cancelled', '❌ Отменено'),
+        ('completed', '🏐 Завершено'),
+        ('rejected', '🚫 Отклонено'),
+    ]
+    
+    PAYMENT_STATUS_CHOICES = [
+        ('pending', 'Ожидает оплаты'),
+        ('paid', 'Оплачено'),
+        ('partial', 'Частично оплачено'),
+        ('refunded', 'Возвращено'),
+        ('cancelled', 'Отмена оплаты'),
+    ]
+    
+    booking_number = models.CharField(max_length=20, unique=True, blank=True, verbose_name="Номер брони")
+    court = models.ForeignKey(
+        VolleyballCourt, 
+        on_delete=models.PROTECT, 
+        related_name='bookings',
+        verbose_name="Площадка"
+    )
+    user = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='court_bookings',
+        verbose_name="Пользователь"
+    )
+    
+    # Время бронирования
+    booking_date = models.DateField(verbose_name="Дата бронирования")
+    start_time = models.TimeField(verbose_name="Время начала")
+    end_time = models.TimeField(verbose_name="Время окончания")
+    hours = models.PositiveIntegerField(verbose_name="Количество часов", default=1)
+    
+    # Участники
+    participants_count = models.PositiveIntegerField(
+        default=6,
+        verbose_name="Количество участников",
+        validators=[MinValueValidator(2), MaxValueValidator(24)]
+    )
+    participants = models.ManyToManyField(
+        User,
+        related_name='booked_games',
+        blank=True,
+        verbose_name="Участники игры"
+    )
+    
+    # Цена
+    price_per_hour = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        verbose_name="Цена за час"
+    )
+    total_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name="Общая стоимость"
+    )
+    deposit_amount = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        default=0,
+        verbose_name="Сумма депозита"
+    )
+    
+    # Статусы
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+        verbose_name="Статус бронирования"
+    )
+    payment_status = models.CharField(
+        max_length=20,
+        choices=PAYMENT_STATUS_CHOICES,
+        default='pending',
+        verbose_name="Статус оплаты"
+    )
+    
+    # Информация
+    contact_name = models.CharField(max_length=100, verbose_name="Контактное лицо")
+    contact_phone = models.CharField(max_length=20, verbose_name="Контактный телефон")
+    contact_email = models.EmailField(blank=True, verbose_name="Email для связи")
+    
+    # Примечания
+    special_requests = models.TextField(blank=True, verbose_name="Особые пожелания")
+    admin_notes = models.TextField(blank=True, verbose_name="Заметки администратора")
+    
+    # Даты
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
+    confirmed_at = models.DateTimeField(null=True, blank=True, verbose_name="Дата подтверждения")
+    cancelled_at = models.DateTimeField(null=True, blank=True, verbose_name="Дата отмены")
+    
+    # Системные поля
+    ip_address = models.GenericIPAddressField(null=True, blank=True, verbose_name="IP адрес")
+    user_agent = models.TextField(blank=True, verbose_name="User Agent")
+    
+    class Meta:
+        verbose_name = "Бронирование площадки"
+        verbose_name_plural = "Бронирования площадок"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['booking_date', 'start_time']),
+            models.Index(fields=['status']),
+            models.Index(fields=['user']),
+        ]
+    
+    def __str__(self):
+        return f"{self.booking_number} - {self.court.name} ({self.booking_date})"
+    
+    def save(self, *args, **kwargs):
+        if not self.booking_number:
+            # Генерация уникального номера брони: BOOK-YYYYMMDD-XXXX
+            date_part = timezone.now().strftime('%Y%m%d')
+            unique_part = uuid.uuid4().hex[:4].upper()
+            self.booking_number = f"BOOK-{date_part}-{unique_part}"
+        
+        if not self.total_price:
+            self.total_price = self.price_per_hour * self.hours
+        
+        if not self.deposit_amount and not self.court.is_free:
+            self.deposit_amount = self.total_price * 0.3  # 30% депозит
+        
+        super().save(*args, **kwargs)
+    
+    @property
+    def is_upcoming(self):
+        """Проверка, предстоящая ли это бронь"""
+        from datetime import datetime
+        booking_datetime = datetime.combine(self.booking_date, self.start_time)
+        return booking_datetime > timezone.now()
+    
+    @property
+    def can_be_cancelled(self):
+        """Можно ли отменить бронь"""
+        from datetime import datetime, timedelta
+        booking_datetime = datetime.combine(self.booking_date, self.start_time)
+        return self.status == 'confirmed' and (booking_datetime - timedelta(hours=24)) > timezone.now()
+    
+    def confirm(self, admin_user=None):
+        """Подтвердить бронирование"""
+        self.status = 'confirmed'
+        self.confirmed_at = timezone.now()
+        if admin_user:
+            self.admin_notes += f"\nПодтверждено администратором {admin_user.username} в {timezone.now()}"
+        self.save()
+    
+    def cancel(self, reason=''):
+        """Отменить бронирование"""
+        self.status = 'cancelled'
+        self.cancelled_at = timezone.now()
+        if reason:
+            self.admin_notes += f"\nОтмена: {reason}"
+        self.save()
+
+class TimeSlot(models.Model):
+    """Временные слоты для бронирования"""
+    court = models.ForeignKey(
+        VolleyballCourt,
+        on_delete=models.CASCADE,
+        related_name='time_slots',
+        verbose_name="Площадка"
+    )
+    date = models.DateField(verbose_name="Дата")
+    start_time = models.TimeField(verbose_name="Время начала")
+    end_time = models.TimeField(verbose_name="Время окончания")
+    
+    # Статус
+    is_available = models.BooleanField(default=True, verbose_name="Доступен")
+    is_booked = models.BooleanField(default=False, verbose_name="Забронирован")
+    is_blocked = models.BooleanField(default=False, verbose_name="Заблокирован")
+    
+    # Связанное бронирование
+    booking = models.ForeignKey(
+        CourtBooking,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='time_slots',
+        verbose_name="Бронирование"
+    )
+    
+    # Цена
+    price = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Цена слота"
+    )
+    
+    class Meta:
+        verbose_name = "Временной слот"
+        verbose_name_plural = "Временные слоты"
+        unique_together = ['court', 'date', 'start_time']
         ordering = ['date', 'start_time']
     
     def __str__(self):
-        return f"{self.title} ({self.get_game_type_display()}) - {self.date}"
+        return f"{self.court.name} - {self.date} {self.start_time}"
     
     @property
     def datetime_start(self):
-        """Возвращает полную дату-время начала"""
-        return datetime.datetime.combine(self.date, self.start_time)
+        from django.utils import timezone
+        from datetime import datetime
+        return timezone.make_aware(datetime.combine(self.date, self.start_time))
     
     @property
     def datetime_end(self):
-        """Возвращает полную дату-время окончания"""
-        return datetime.datetime.combine(self.date, self.end_time)
+        from django.utils import timezone
+        from datetime import datetime
+        return timezone.make_aware(datetime.combine(self.date, self.end_time))
     
-    @property
-    def spots_left(self):
-        """Оставшееся количество мест"""
-        return self.max_players - self.participants.count()
+    def is_past(self):
+        """Прошедший ли слот"""
+        return self.datetime_end < timezone.now()
     
-    @property
-    def is_full(self):
-        """Игра заполнена?"""
-        return self.spots_left <= 0
-    
-    @property
-    def can_join(self):
-        """Можно ли присоединиться к игре"""
-        return (self.status == 'active' and 
-                not self.is_full and
-                self.datetime_start > timezone.now())
-    
-    @property
-    def location_display(self):
-        """Место проведения (из площадки или текста)"""
-        if self.court:
-            return self.court.name
-        return self.location_text
+    def is_ongoing(self):
+        """Текущий ли слот"""
+        return self.datetime_start <= timezone.now() <= self.datetime_end
 
 class UserProfile(models.Model):
-    """Расширенный профиль пользователя для волейбола"""
+    """Расширенный профиль пользователя"""
     POSITION_CHOICES = [
         ('setter', 'Связующий'),
         ('outside', 'Доигровщик'),
         ('opposite', 'Диагональный'),
         ('middle', 'Центральный блокирующий'),
         ('libero', 'Либеро'),
+        ('all', 'Универсал'),
     ]
 
     SKILL_LEVEL_CHOICES = [
@@ -576,7 +628,7 @@ class UserProfile(models.Model):
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     bio = models.TextField('О себе', blank=True)
-    city = models.CharField('Город', max_length=100, blank=True)
+    city = models.CharField('Город', max_length=100, blank=True, default="Москва")
     age = models.PositiveIntegerField('Возраст', null=True, blank=True)
 
     # Волейбольная специализация
@@ -590,7 +642,7 @@ class UserProfile(models.Model):
         'Все позиции', 
         max_length=100, 
         blank=True,
-        help_text="Укажите через запятую (например: доигровщик, либеро)"
+        help_text="Укажите через запятую"
     )
     skill_level = models.CharField(
         'Уровень игры', 
@@ -606,8 +658,7 @@ class UserProfile(models.Model):
     play_style = models.CharField(
         'Стиль игры', 
         max_length=50, 
-        blank=True,
-        help_text="Например: атакующий, тактический, защитный"
+        blank=True
     )
     preferred_venue = models.CharField(
         'Предпочитаемая площадка', 
@@ -618,44 +669,311 @@ class UserProfile(models.Model):
         'Дни для игр', 
         max_length=100, 
         blank=True,
-        help_text="Например: вечера будних, выходные"
+        default="вечера будних, выходные"
     )
 
     # Социальные сети
     telegram = models.CharField('Telegram', max_length=100, blank=True)
     vk = models.CharField('ВКонтакте', max_length=100, blank=True)
     whatsapp = models.CharField('WhatsApp', max_length=100, blank=True)
+    
+    # Настройки уведомлений
+    notify_bookings = models.BooleanField('Уведомлять о бронированиях', default=True)
+    notify_messages = models.BooleanField('Уведомлять о сообщениях', default=True)
+    notify_news = models.BooleanField('Уведомлять о новостях', default=False)
 
     avatar = models.ImageField('Аватар', upload_to='avatars/', blank=True)
     created_at = models.DateTimeField('Дата регистрации', auto_now_add=True)
+    updated_at = models.DateTimeField('Дата обновления', auto_now=True)
 
     class Meta:
         verbose_name = 'Профиль волейболиста'
         verbose_name_plural = 'Профили волейболистов'
 
     def __str__(self):
-        return f"{self.user.username} - {self.get_position_display() if self.position else 'Не указана'} ({self.city})"
+        return f"{self.user.username} - {self.city}"
+
+    @property
+    def full_name(self):
+        return self.user.get_full_name() or self.user.username
+
+class Payment(models.Model):
+    """Платежи за бронирования"""
+    PAYMENT_METHODS = [
+        ('card', 'Банковская карта'),
+        ('sbp', 'СБП (СБП)'),
+        ('cash', 'Наличные'),
+        ('transfer', 'Банковский перевод'),
+        ('other', 'Другое'),
+    ]
+    
+    PAYMENT_STATUSES = [
+        ('pending', 'Ожидает оплаты'),
+        ('processing', 'В обработке'),
+        ('completed', 'Завершено'),
+        ('failed', 'Не удалось'),
+        ('refunded', 'Возвращено'),
+        ('cancelled', 'Отменено'),
+    ]
+    
+    booking = models.ForeignKey(
+        CourtBooking,
+        on_delete=models.CASCADE,
+        related_name='payments',
+        verbose_name="Бронирование"
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='payments',
+        verbose_name="Пользователь"
+    )
+    
+    # Информация о платеже
+    payment_number = models.CharField(max_length=50, unique=True, verbose_name="Номер платежа")
+    amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Сумма")
+    currency = models.CharField(max_length=3, default='RUB', verbose_name="Валюта")
+    payment_method = models.CharField(
+        max_length=20,
+        choices=PAYMENT_METHODS,
+        verbose_name="Способ оплаты"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=PAYMENT_STATUSES,
+        default='pending',
+        verbose_name="Статус платежа"
+    )
+    
+    # Информация банка/платежной системы
+    transaction_id = models.CharField(max_length=100, blank=True, verbose_name="ID транзакции")
+    bank_response = models.TextField(blank=True, verbose_name="Ответ банка")
+    
+    # Даты
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    processed_at = models.DateTimeField(null=True, blank=True, verbose_name="Дата обработки")
+    completed_at = models.DateTimeField(null=True, blank=True, verbose_name="Дата завершения")
+    
+    class Meta:
+        verbose_name = "Платеж"
+        verbose_name_plural = "Платежи"
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.payment_number} - {self.amount} {self.currency}"
+
+class Notification(models.Model):
+    """Уведомления для пользователей"""
+    TYPE_CHOICES = [
+        ('booking_confirmed', 'Бронирование подтверждено'),
+        ('booking_cancelled', 'Бронирование отменено'),
+        ('booking_reminder', 'Напоминание о игре'),
+        ('payment_success', 'Оплата прошла успешно'),
+        ('payment_failed', 'Ошибка оплаты'),
+        ('new_message', 'Новое сообщение'),
+        ('friend_request', 'Запрос в друзья'),
+        ('game_invite', 'Приглашение на игру'),
+        ('system', 'Системное уведомление'),
+    ]
+    
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='notifications',
+        verbose_name="Пользователь"
+    )
+    notification_type = models.CharField(
+        max_length=30,
+        choices=TYPE_CHOICES,
+        verbose_name="Тип уведомления"
+    )
+    title = models.CharField(max_length=200, verbose_name="Заголовок")
+    message = models.TextField(verbose_name="Сообщение")
+    is_read = models.BooleanField(default=False, verbose_name="Прочитано")
+    
+    # Ссылка на связанный объект
+    related_object_type = models.CharField(max_length=50, blank=True, verbose_name="Тип объекта")
+    related_object_id = models.PositiveIntegerField(null=True, blank=True, verbose_name="ID объекта")
+    
+    # Дополнительные данные
+    data = models.JSONField(default=dict, blank=True, verbose_name="Дополнительные данные")
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    
+    class Meta:
+        verbose_name = "Уведомление"
+        verbose_name_plural = "Уведомления"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'is_read']),
+            models.Index(fields=['created_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.title}"
+    
+    def mark_as_read(self):
+        """Пометить как прочитанное"""
+        self.is_read = True
+        self.save()
 
 class Friendship(models.Model):
-    """Система друзей/партнёров по волейболу"""
-    from_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friendships_sent')
-    to_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friendships_received')
+    """Система друзей/партнёров"""
+    from_user = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='friendships_sent'
+    )
+    to_user = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='friendships_received'
+    )
     status = models.CharField(
         max_length=20,
         choices=[
             ('pending', 'Ожидает подтверждения'),
             ('accepted', 'Принято'),
             ('rejected', 'Отклонено'),
+            ('blocked', 'Заблокировано'),
         ],
         default='pending'
     )
     court_partner = models.BooleanField('Партнёр по площадке', default=False)
     created_at = models.DateTimeField(auto_now_add=True)
-
+    updated_at = models.DateTimeField(auto_now=True)
+    
     class Meta:
         unique_together = ('from_user', 'to_user')
         verbose_name = 'Волейбольное знакомство'
         verbose_name_plural = 'Волейбольные знакомства'
-
+    
     def __str__(self):
         return f"{self.from_user} → {self.to_user} ({self.get_status_display()})"
+
+class GameParticipation(models.Model):
+    """Участие в играх"""
+    user = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        verbose_name="Участник",
+        related_name='game_participations'
+    )
+    game = models.ForeignKey(
+        Game, 
+        on_delete=models.CASCADE, 
+        verbose_name="Игра",
+        related_name='participations'
+    )
+    joined_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата записи")
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'Ожидает подтверждения'),
+            ('confirmed', 'Подтверждено'),
+            ('rejected', 'Отклонено'),
+            ('cancelled', 'Отменено'),
+        ],
+        default='pending',
+        verbose_name="Статус"
+    )
+    comment = models.TextField(blank=True, verbose_name="Комментарий участника")
+    
+    class Meta:
+        unique_together = ['user', 'game']
+        verbose_name = "Участие в игре"
+        verbose_name_plural = "Участия в играх"
+        ordering = ['-joined_at']
+    
+    def __str__(self):
+        return f"{self.user.username} → {self.game.title}"
+    
+    @property
+    def can_cancel(self):
+        """Можно ли отменить участие"""
+        from datetime import datetime, timedelta
+        game_datetime = datetime.combine(self.game.game_date, self.game.game_time)
+        return (game_datetime - timedelta(hours=12)) > timezone.now()
+
+class Review(models.Model):
+    """Отзывы о площадках"""
+    court = models.ForeignKey(
+        VolleyballCourt,
+        on_delete=models.CASCADE,
+        related_name='reviews',
+        verbose_name="Площадка"
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='reviews',
+        verbose_name="Пользователь"
+    )
+    booking = models.ForeignKey(
+        CourtBooking,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='review',
+        verbose_name="Бронирование"
+    )
+    
+    # Оценки
+    rating_overall = models.PositiveIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        verbose_name="Общая оценка"
+    )
+    rating_condition = models.PositiveIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        verbose_name="Состояние площадки"
+    )
+    rating_service = models.PositiveIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        verbose_name="Качество обслуживания"
+    )
+    rating_price = models.PositiveIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        verbose_name="Соотношение цена/качество"
+    )
+    
+    # Текст отзыва
+    title = models.CharField(max_length=200, verbose_name="Заголовок отзыва")
+    comment = models.TextField(verbose_name="Комментарий")
+    pros = models.TextField(blank=True, verbose_name="Достоинства")
+    cons = models.TextField(blank=True, verbose_name="Недостатки")
+    
+    # Статус
+    is_verified = models.BooleanField(default=False, verbose_name="Проверенный отзыв")
+    is_published = models.BooleanField(default=True, verbose_name="Опубликовано")
+    
+    # Технические поля
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
+    
+    class Meta:
+        verbose_name = "Отзыв"
+        verbose_name_plural = "Отзывы"
+        unique_together = ['court', 'user']
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"Отзыв от {self.user.username} на {self.court.name}"
+    
+    @property
+    def average_rating(self):
+        """Средняя оценка"""
+        return (self.rating_overall + self.rating_condition + self.rating_service + self.rating_price) / 4
+
+# Сигналы для автоматического создания профиля
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        UserProfile.objects.create(user=instance)
+
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    if hasattr(instance, 'profile'):
+        instance.profile.save()

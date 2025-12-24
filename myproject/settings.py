@@ -42,8 +42,10 @@ ROOT_URLCONF = 'myproject.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
-        'APP_DIRS': True,
+        'DIRS': [
+            BASE_DIR / 'templates',  # глобальные шаблоны
+        ],
+        'APP_DIRS': True,  # ИСКАТЬ ШАБЛОНЫ В ПРИЛОЖЕНИЯХ
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
@@ -54,6 +56,13 @@ TEMPLATES = [
         },
     },
 ]
+# ОТКЛЮЧАЕМ КЭШ В РАЗРАБОТКЕ
+if DEBUG:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+        }
+    }
 
 WSGI_APPLICATION = 'myproject.wsgi.application'
 
@@ -101,3 +110,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/profile/'
 LOGOUT_REDIRECT_URL = '/'
+
+HANDLER404 = 'your_project_name.handler.handler404'
+HANDLER500 = 'your_project_name.handler.handler500'
+HANDLER403 = 'your_project_name.handler.handler403'
+HANDLER400 = 'your_project_name.handler.handler400'

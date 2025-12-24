@@ -1,313 +1,766 @@
-<!-- myapp/templates/myapp/suggest_court.html -->
-{% extends "myapp/base.html" %}
-{% load static %}
-
-{% block title %}Предложить новую площадку{% endblock %}
-
-{% block content %}
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-lg-10">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <h3 class="mb-0">
-                        <i class="fas fa-map-marker-alt"></i> Предложить новую волейбольную площадку
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Предложить площадку | Волейбольное сообщество</title>
+    
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary-color: #4e54c8;
+            --secondary-color: #8f94fb;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --light-bg: #f8f9fa;
+        }
+        
+        body {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding-top: 20px;
+            padding-bottom: 50px;
+        }
+        
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            border: none;
+        }
+        
+        .header-title {
+            color: var(--primary-color);
+            font-size: 2.8rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+        
+        .header-subtitle {
+            color: #6c757d;
+            font-size: 1.2rem;
+            margin-bottom: 25px;
+        }
+        
+        .form-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            border: none;
+        }
+        
+        .form-section {
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .form-section:last-child {
+            border-bottom: none;
+        }
+        
+        .section-title {
+            color: var(--primary-color);
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid var(--secondary-color);
+            display: flex;
+            align-items: center;
+        }
+        
+        .section-title i {
+            margin-right: 12px;
+            font-size: 1.3rem;
+        }
+        
+        .form-label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .form-label i {
+            margin-right: 8px;
+            color: var(--primary-color);
+            width: 20px;
+        }
+        
+        .required::after {
+            content: " *";
+            color: var(--danger-color);
+        }
+        
+        .form-control, .form-select {
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 14px 18px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(78, 84, 200, 0.15);
+        }
+        
+        .checkbox-group {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px dashed #dee2e6;
+        }
+        
+        .checkbox-item {
+            margin-bottom: 15px;
+            padding: 12px 15px;
+            background: white;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+            transition: all 0.3s;
+        }
+        
+        .checkbox-item:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        
+        .checkbox-item label {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            margin-bottom: 0;
+            font-weight: 500;
+        }
+        
+        .btn {
+            padding: 14px 30px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s;
+            border: none;
+        }
+        
+        .btn-submit {
+            background: linear-gradient(135deg, var(--success-color) 0%, #20c997 100%);
+            color: white;
+            padding: 16px 50px;
+            font-size: 1.2rem;
+        }
+        
+        .btn-submit:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(40, 167, 69, 0.3);
+        }
+        
+        .btn-back {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-back:hover {
+            background: #5a6268;
+            transform: translateY(-3px);
+            box-shadow: 0 7px 15px rgba(108, 117, 125, 0.3);
+        }
+        
+        .tips-card {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border: 2px solid #90caf9;
+            border-radius: 20px;
+            padding: 30px;
+            margin-top: 40px;
+        }
+        
+        .tips-title {
+            color: #1565c0;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .tips-title i {
+            margin-right: 10px;
+        }
+        
+        .tip-item {
+            margin-bottom: 15px;
+            padding-left: 10px;
+            border-left: 4px solid #42a5f5;
+            padding-left: 20px;
+        }
+        
+        .tip-item i {
+            color: #42a5f5;
+            margin-right: 10px;
+        }
+        
+        .alert-box {
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            border-left: 6px solid;
+        }
+        
+        .alert-success {
+            background-color: #d4edda;
+            border-color: var(--success-color);
+            color: #155724;
+        }
+        
+        .alert-error {
+            background-color: #f8d7da;
+            border-color: var(--danger-color);
+            color: #721c24;
+        }
+        
+        .character-count {
+            font-size: 0.85rem;
+            color: #6c757d;
+            text-align: right;
+            margin-top: 5px;
+        }
+        
+        .character-count.warning {
+            color: var(--warning-color);
+        }
+        
+        .character-count.danger {
+            color: var(--danger-color);
+        }
+        
+        .price-input-group {
+            position: relative;
+        }
+        
+        .price-suffix {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            .header-title {
+                font-size: 2.2rem;
+            }
+            
+            .form-card {
+                padding: 25px;
+            }
+            
+            .btn {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Шапка -->
+        <div class="header-card">
+            <h1 class="header-title">
+                <i class="fas fa-map-marker-alt"></i> Предложить новую площадку
+            </h1>
+            <p class="header-subtitle">
+                Помогите расширить нашу карту волейбольных площадок! Добавьте информацию о месте, где можно поиграть.
+            </p>
+            
+            <!-- Навигация -->
+            <div class="d-flex flex-wrap justify-content-center gap-3 mt-4">
+                <a href="/" class="btn btn-back">
+                    <i class="fas fa-home me-2"></i> На главную
+                </a>
+                <a href="/map/" class="btn btn-outline-primary">
+                    <i class="fas fa-map me-2"></i> Карта площадок
+                </a>
+                <a href="/my_suggestions/" class="btn btn-outline-info">
+                    <i class="fas fa-history me-2"></i> Мои предложения
+                </a>
+            </div>
+        </div>
+        
+        <!-- Форма предложения площадки -->
+        <div class="form-card">
+            <!-- Сообщения об ошибках/успехе -->
+            <div id="message-container">
+                <!-- Здесь будут появляться сообщения -->
+            </div>
+            
+            <form id="courtSuggestionForm" method="post" action="/suggest_court/">
+                {% csrf_token %}
+                
+                <!-- 1. Основная информация -->
+                <div class="form-section">
+                    <h3 class="section-title">
+                        <i class="fas fa-info-circle"></i> Основная информация
                     </h3>
-                </div>
-                <div class="card-body">
-                    <p class="text-muted mb-4">
-                        Заполните форму ниже. После проверки модератором площадка появится на карте.
-                        Поля отмеченные * обязательны для заполнения.
-                    </p>
                     
-                    <form method="POST" id="courtForm">
-                        {% csrf_token %}
-                        
-                        <div class="row mb-4">
-                            <div class="col-md-6">
-                                <h5><i class="fas fa-info-circle"></i> Основная информация</h5>
-                                <hr>
-                                
-                                <div class="mb-3">
-                                    <label class="form-label">Название площадки *</label>
-                                    {{ form.name }}
-                                    {% if form.name.errors %}
-                                    <div class="text-danger">{{ form.name.errors }}</div>
-                                    {% endif %}
-                                </div>
-                                
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Город *</label>
-                                        {{ form.city }}
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Тип площадки *</label>
-                                        {{ form.court_type }}
-                                    </div>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label class="form-label">Адрес *</label>
-                                    {{ form.address }}
-                                    <small class="text-muted">Полный адрес с улицей и домом</small>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label class="form-label">Описание</label>
-                                    {{ form.description }}
-                                    <small class="text-muted">Опишите площадку: покрытие, состояние, особенности</small>
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <h5><i class="fas fa-cogs"></i> Характеристики</h5>
-                                <hr>
-                                
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Количество площадок</label>
-                                        {{ form.courts_count }}
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Покрытие</label>
-                                        {{ form.surface }}
-                                    </div>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <div class="form-check form-switch">
-                                        {{ form.is_free }}
-                                        <label class="form-check-label">Бесплатная площадка</label>
-                                    </div>
-                                </div>
-                                
-                                <div class="mb-3" id="priceField">
-                                    <label class="form-label">Цена за час (руб)</label>
-                                    {{ form.price_per_hour }}
-                                    <small class="text-muted">Оставьте 0 для бесплатных площадок</small>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label class="form-label">Детали оплаты</label>
-                                    {{ form.price_details }}
-                                    <small class="text-muted">Скидки, абонементы, условия аренды</small>
-                                </div>
-                            </div>
+                    <div class="row mb-4">
+                        <div class="col-md-6 mb-3">
+                            <label for="courtName" class="form-label required">
+                                <i class="fas fa-signature"></i> Название площадки
+                            </label>
+                            <input type="text" class="form-control" id="courtName" name="name" 
+                                   placeholder="Например: Спорткомплекс 'Олимп'" required>
+                            <div class="form-text">Официальное или общепринятое название</div>
                         </div>
                         
-                        <!-- Координаты -->
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <h5><i class="fas fa-map-pin"></i> Координаты (необязательно)</h5>
-                                <hr>
-                                <p class="text-muted">Укажите координаты для точного отображения на карте</p>
-                                
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Широта</label>
-                                        {{ coord_form.latitude }}
-                                        <small class="text-muted">Например: 55.7558</small>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Долгота</label>
-                                        {{ coord_form.longitude }}
-                                        <small class="text-muted">Например: 37.6173</small>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="courtCity" class="form-label required">
+                                <i class="fas fa-city"></i> Город
+                            </label>
+                            <input type="text" class="form-control" id="courtCity" name="city" 
+                                   placeholder="Например: Москва" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="courtAddress" class="form-label required">
+                            <i class="fas fa-map-marker-alt"></i> Адрес
+                        </label>
+                        <input type="text" class="form-control" id="courtAddress" name="address" 
+                               placeholder="Улица, дом, район, ориентиры" required>
+                        <div class="form-text">Чем точнее адрес, тем проще будет найти площадку</div>
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6 mb-3">
+                            <label for="courtType" class="form-label required">
+                                <i class="fas fa-volleyball-ball"></i> Тип площадки
+                            </label>
+                            <select class="form-select" id="courtType" name="court_type" required>
+                                <option value="" selected disabled>Выберите тип</option>
+                                <option value="indoor">Закрытый зал</option>
+                                <option value="outdoor">Открытая площадка</option>
+                                <option value="beach">Пляж</option>
+                            </select>
                         </div>
                         
-                        <!-- Удобства -->
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <h5><i class="fas fa-thumbs-up"></i> Удобства</h5>
-                                <hr>
-                                
-                                <div class="row">
-                                    <div class="col-md-4 mb-3">
-                                        <div class="form-check form-switch">
-                                            {{ form.is_lighted }}
-                                            <label class="form-check-label">Есть освещение</label>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4 mb-3">
-                                        <div class="form-check form-switch">
-                                            {{ form.has_showers }}
-                                            <label class="form-check-label">Есть душ</label>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4 mb-3">
-                                        <div class="form-check form-switch">
-                                            {{ form.has_locker_rooms }}
-                                            <label class="form-check-label">Есть раздевалки</label>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="row">
-                                    <div class="col-md-4 mb-3">
-                                        <div class="form-check form-switch">
-                                            {{ form.has_equipment_rental }}
-                                            <label class="form-check-label">Аренда инвентаря</label>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4 mb-3">
-                                        <div class="form-check form-switch">
-                                            {{ form.has_parking }}
-                                            <label class="form-check-label">Есть парковка</label>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4 mb-3">
-                                        <div class="form-check form-switch">
-                                            {{ form.has_cafe }}
-                                            <label class="form-check-label">Есть кафе/буфет</label>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="courtSurface" class="form-label required">
+                                <i class="fas fa-layer-group"></i> Покрытие
+                            </label>
+                            <select class="form-select" id="courtSurface" name="surface" required>
+                                <option value="" selected disabled>Выберите покрытие</option>
+                                <option value="synthetic">Синтетика</option>
+                                <option value="parquet">Паркет</option>
+                                <option value="asphalt">Асфальт</option>
+                                <option value="sand">Песок</option>
+                                <option value="grass">Газон</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 2. Удобства и характеристики -->
+                <div class="form-section">
+                    <h3 class="section-title">
+                        <i class="fas fa-star"></i> Удобства и характеристики
+                    </h3>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6 mb-3">
+                            <label for="courtsCount" class="form-label">
+                                <i class="fas fa-hashtag"></i> Количество площадок
+                            </label>
+                            <input type="number" class="form-control" id="courtsCount" name="courts_count" 
+                                   min="1" max="20" value="1">
                         </div>
                         
-                        <!-- Время работы и контакты -->
-                        <div class="row mb-4">
-                            <div class="col-md-6">
-                                <h5><i class="fas fa-clock"></i> Время работы</h5>
-                                <hr>
-                                
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Открытие</label>
-                                        {{ form.opening_time }}
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Закрытие</label>
-                                        {{ form.closing_time }}
-                                    </div>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label class="form-label">Дни работы</label>
-                                    {{ form.working_days }}
-                                </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="pricePerHour" class="form-label">
+                                <i class="fas fa-money-bill-wave"></i> Стоимость (руб./час)
+                            </label>
+                            <div class="price-input-group">
+                                <input type="number" class="form-control" id="pricePerHour" name="price_per_hour" 
+                                       min="0" step="50" value="0">
+                                <span class="price-suffix">₽/час</span>
                             </div>
-                            
-                            <div class="col-md-6">
-                                <h5><i class="fas fa-phone"></i> Контакты</h5>
-                                <hr>
-                                
-                                <div class="mb-3">
-                                    <label class="form-label">Телефон</label>
-                                    {{ form.phone }}
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label class="form-label">Сайт</label>
-                                    {{ form.website }}
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label class="form-label">Email</label>
-                                    {{ form.email }}
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Дополнительно -->
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <h5><i class="fas fa-image"></i> Дополнительно</h5>
-                                <hr>
-                                
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Ссылка на фото</label>
-                                        {{ form.photo_url }}
-                                        <small class="text-muted">Загрузите фото на imgur.com</small>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Теги для поиска</label>
-                                        {{ form.tags }}
-                                        <small class="text-muted">Через запятую: волейбол, спорт, площадка</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Подтверждение -->
-                        <div class="mb-4">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" required id="acceptRules">
-                                <label class="form-check-label" for="acceptRules">
-                                    Я подтверждаю, что предоставленная информация точна и соответствует правилам сообщества
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="checkbox" id="isFree" name="is_free">
+                                <label class="form-check-label" for="isFree">
+                                    Бесплатная площадка
                                 </label>
                             </div>
                         </div>
-                        
-                        <!-- Кнопки -->
-                        <div class="d-flex justify-content-between">
-                            <a href="{% url 'map' %}" class="btn btn-secondary">
-                                <i class="fas fa-arrow-left"></i> Отмена
-                            </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-paper-plane"></i> Отправить на модерацию
-                            </button>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label">
+                            <i class="fas fa-thumbs-up"></i> Доступные удобства
+                        </label>
+                        <div class="checkbox-group">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="checkbox-item">
+                                        <label>
+                                            <input type="checkbox" name="is_lighted" class="me-2">
+                                            <i class="fas fa-lightbulb text-warning me-2"></i> Есть освещение
+                                        </label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <label>
+                                            <input type="checkbox" name="has_parking" class="me-2">
+                                            <i class="fas fa-parking text-success me-2"></i> Есть парковка
+                                        </label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <label>
+                                            <input type="checkbox" name="has_showers" class="me-2">
+                                            <i class="fas fa-shower text-info me-2"></i> Есть душ
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="checkbox-item">
+                                        <label>
+                                            <input type="checkbox" name="has_locker_rooms" class="me-2">
+                                            <i class="fas fa-tshirt text-secondary me-2"></i> Есть раздевалки
+                                        </label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <label>
+                                            <input type="checkbox" name="has_cafe" class="me-2">
+                                            <i class="fas fa-coffee text-brown me-2"></i> Есть кафе/бар
+                                        </label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <label>
+                                            <input type="checkbox" name="has_equipment_rental" class="me-2">
+                                            <i class="fas fa-basketball-ball text-danger me-2"></i> Прокат инвентаря
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </form>
+                    </div>
                 </div>
+                
+                <!-- 3. Время работы -->
+                <div class="form-section">
+                    <h3 class="section-title">
+                        <i class="fas fa-clock"></i> Время работы
+                    </h3>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6 mb-3">
+                            <label for="openingTime" class="form-label">
+                                <i class="fas fa-door-open"></i> Время открытия
+                            </label>
+                            <input type="time" class="form-control" id="openingTime" name="opening_time" value="08:00">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="closingTime" class="form-label">
+                                <i class="fas fa-door-closed"></i> Время закрытия
+                            </label>
+                            <input type="time" class="form-control" id="closingTime" name="closing_time" value="22:00">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="workingDays" class="form-label">
+                            <i class="fas fa-calendar-alt"></i> Дни работы
+                        </label>
+                        <input type="text" class="form-control" id="workingDays" name="working_days" 
+                               placeholder="Например: Пн-Вс, 8:00-22:00" value="Пн-Вс, 8:00-22:00">
+                    </div>
+                </div>
+                
+                <!-- 4. Контактная информация -->
+                <div class="form-section">
+                    <h3 class="section-title">
+                        <i class="fas fa-address-book"></i> Контактная информация
+                    </h3>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6 mb-3">
+                            <label for="phone" class="form-label">
+                                <i class="fas fa-phone"></i> Телефон
+                            </label>
+                            <input type="tel" class="form-control" id="phone" name="phone" 
+                                   placeholder="+7 (999) 123-45-67">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="email" class="form-label">
+                                <i class="fas fa-envelope"></i> Email
+                            </label>
+                            <input type="email" class="form-control" id="email" name="email" 
+                                   placeholder="contact@example.com">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="website" class="form-label">
+                            <i class="fas fa-globe"></i> Сайт
+                        </label>
+                        <input type="url" class="form-control" id="website" name="website" 
+                               placeholder="https://example.com">
+                    </div>
+                </div>
+                
+                <!-- 5. Описание и фото -->
+                <div class="form-section">
+                    <h3 class="section-title">
+                        <i class="fas fa-align-left"></i> Описание и фото
+                    </h3>
+                    
+                    <div class="mb-4">
+                        <label for="description" class="form-label">
+                            <i class="fas fa-file-alt"></i> Описание площадки
+                        </label>
+                        <textarea class="form-control" id="description" name="description" rows="4" 
+                                  placeholder="Опишите площадку: размеры, состояние сетки и покрытия, ближайшие ориентиры, особенности..."></textarea>
+                        <div class="character-count" id="descriptionCount">0/1000 символов</div>
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-8 mb-3">
+                            <label for="photoUrl" class="form-label">
+                                <i class="fas fa-camera"></i> Ссылка на фото
+                            </label>
+                            <input type="url" class="form-control" id="photoUrl" name="photo_url" 
+                                   placeholder="https://imgur.com/... или другой хостинг">
+                            <div class="form-text">Загрузите фото на Imgur, Google Drive и вставьте прямую ссылку</div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="tags" class="form-label">
+                                <i class="fas fa-tags"></i> Теги
+                            </label>
+                            <input type="text" class="form-control" id="tags" name="tags" 
+                                   placeholder="волейбол, спорт, площадка">
+                            <div class="form-text">Ключевые слова через запятую</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 6. Подтверждение правил -->
+                <div class="form-section">
+                    <div class="alert alert-info">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="acceptRules" name="accept_rules" required>
+                            <label class="form-check-label fw-bold" for="acceptRules">
+                                <i class="fas fa-check-circle me-2"></i>
+                                Я подтверждаю, что предоставленная информация точна и соответствует правилам сообщества
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Кнопки отправки -->
+                <div class="d-flex justify-content-between mt-5">
+                    <button type="button" onclick="window.history.back()" class="btn btn-back">
+                        <i class="fas fa-arrow-left me-2"></i> Назад
+                    </button>
+                    
+                    <button type="submit" class="btn btn-submit">
+                        <i class="fas fa-paper-plane me-2"></i> Отправить предложение
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Советы и подсказки -->
+        <div class="tips-card">
+            <h4 class="tips-title">
+                <i class="fas fa-lightbulb"></i> Советы по заполнению
+            </h4>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="tip-item">
+                        <i class="fas fa-check-circle"></i> Указывайте точный адрес с улицей и домом
+                    </div>
+                    <div class="tip-item">
+                        <i class="fas fa-check-circle"></i> Фотографии помогают другим оценить площадку
+                    </div>
+                    <div class="tip-item">
+                        <i class="fas fa-check-circle"></i> Укажите реальное время работы
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="tip-item">
+                        <i class="fas fa-check-circle"></i> Отметьте все доступные удобства
+                    </div>
+                    <div class="tip-item">
+                        <i class="fas fa-check-circle"></i> Теги помогут быстрее найти вашу площадку
+                    </div>
+                    <div class="tip-item">
+                        <i class="fas fa-check-circle"></i> После проверки площадка появится на карте
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-4 p-3 bg-white rounded">
+                <p class="mb-0 text-muted">
+                    <small>
+                        <i class="fas fa-info-circle me-2"></i>
+                        Ваше предложение будет проверено модератором. Обычно это занимает 1-2 рабочих дня.
+                    </small>
+                </p>
             </div>
         </div>
     </div>
-</div>
-
-<style>
-    .form-control, .form-select {
-        padding: 10px;
-        border-radius: 8px;
-        border: 1px solid #ddd;
-    }
     
-    .form-control:focus, .form-select:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
-    }
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
-    .form-check-input:checked {
-        background-color: #667eea;
-        border-color: #667eea;
-    }
-    
-    .card {
-        border-radius: 15px;
-        border: none;
-    }
-    
-    .card-header {
-        border-radius: 15px 15px 0 0 !important;
-    }
-</style>
-
-<script>
-    // Показать/скрыть поле цены в зависимости от чекбокса "бесплатно"
-    document.getElementById('id_is_free').addEventListener('change', function() {
-        const priceField = document.getElementById('priceField');
-        const priceInput = document.getElementById('id_price_per_hour');
-        
-        if (this.checked) {
-            priceField.style.opacity = '0.6';
-            priceInput.value = 0;
-            priceInput.disabled = true;
-        } else {
-            priceField.style.opacity = '1';
-            priceInput.disabled = false;
-        }
-    });
-    
-    // Инициализация
-    document.addEventListener('DOMContentLoaded', function() {
-        const isFreeCheckbox = document.getElementById('id_is_free');
-        if (isFreeCheckbox) {
-            isFreeCheckbox.dispatchEvent(new Event('change'));
-        }
-    });
-</script>
-{% endblock %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 1. Обработка бесплатной площадки
+            const freeCheckbox = document.getElementById('isFree');
+            const priceInput = document.getElementById('pricePerHour');
+            
+            freeCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    priceInput.value = 0;
+                    priceInput.disabled = true;
+                    priceInput.style.backgroundColor = '#f8f9fa';
+                } else {
+                    priceInput.disabled = false;
+                    priceInput.style.backgroundColor = '';
+                }
+            });
+            
+            // 2. Валидация времени работы
+            const openingTime = document.getElementById('openingTime');
+            const closingTime = document.getElementById('closingTime');
+            
+            function validateTime() {
+                if (openingTime.value && closingTime.value) {
+                    if (openingTime.value >= closingTime.value) {
+                        closingTime.setCustomValidity('Время закрытия должно быть позже времени открытия');
+                        closingTime.style.borderColor = 'var(--danger-color)';
+                    } else {
+                        closingTime.setCustomValidity('');
+                        closingTime.style.borderColor = '';
+                    }
+                }
+            }
+            
+            openingTime.addEventListener('change', validateTime);
+            closingTime.addEventListener('change', validateTime);
+            
+            // 3. Счетчик символов для описания
+            const descriptionTextarea = document.getElementById('description');
+            const descriptionCount = document.getElementById('descriptionCount');
+            
+            descriptionTextarea.addEventListener('input', function() {
+                const length = this.value.length;
+                descriptionCount.textContent = `${length}/1000 символов`;
+                
+                if (length > 900) {
+                    descriptionCount.className = 'character-count warning';
+                } else if (length > 1000) {
+                    descriptionCount.className = 'character-count danger';
+                } else {
+                    descriptionCount.className = 'character-count';
+                }
+            });
+            
+            // 4. Определение города по IP (опционально)
+            const cityInput = document.getElementById('courtCity');
+            if (!cityInput.value) {
+                // Простой запрос для определения города
+                fetch('https://ipapi.co/json/')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.city) {
+                            cityInput.placeholder = `Ваш город: ${data.city}`;
+                        }
+                    })
+                    .catch(() => {
+                        // Если запрос не удался, ничего не делаем
+                    });
+            }
+            
+            // 5. Обработка отправки формы
+            const form = document.getElementById('courtSuggestionForm');
+            const messageContainer = document.getElementById('message-container');
+            
+            form.addEventListener('submit', function(event) {
+                // Проверка времени работы
+                validateTime();
+                
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    
+                    // Показываем ошибки
+                    showMessage('Пожалуйста, заполните все обязательные поля правильно', 'error');
+                    
+                    // Прокручиваем к первой ошибке
+                    const firstInvalid = form.querySelector(':invalid');
+                    if (firstInvalid) {
+                        firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        firstInvalid.focus();
+                    }
+                } else {
+                    // Показываем сообщение об отправке
+                    showMessage('Отправка данных...', 'info');
+                }
+            });
+            
+            // 6. Функция для показа сообщений
+            function showMessage(text, type) {
+                const alertClass = type === 'error' ? 'alert-error' : 
+                                  type === 'success' ? 'alert-success' : 'alert-info';
+                
+                const messageHTML = `
+                    <div class="alert-box ${alertClass}">
+                        <i class="fas fa-${type === 'error' ? 'exclamation-triangle' : 
+                                         type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
+                        ${text}
+                    </div>
+                `;
+                
+                messageContainer.innerHTML = messageHTML;
+                
+                // Автоматическое скрытие через 5 секунд (кроме ошибок)
+                if (type !== 'error') {
+                    setTimeout(() => {
+                        messageContainer.innerHTML = '';
+                    }, 5000);
+                }
+            }
+            
+            // 7. Предзаполнение города при клике (если не определено)
+            cityInput.addEventListener('click', function() {
+                if (!this.value && this.placeholder.includes('Ваш город:')) {
+                    const suggestedCity = this.placeholder.replace('Ваш город: ', '');
+                    this.value = suggestedCity;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
