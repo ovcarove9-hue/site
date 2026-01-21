@@ -11,7 +11,8 @@ from django.views.decorators.http import require_POST, require_GET
 from django.conf import settings
 import json
 from datetime import datetime, timedelta, date
-
+import calendar
+from datetime import datetime, timedelta, date
 from .models import (
     UserProfile, VolleyballCourt, Game, GameParticipation,
     Friendship, CourtBooking, TimeSlot, Review, CourtPhoto
@@ -22,6 +23,85 @@ from .forms import (
     CourtBookingForm, ReviewForm, QuickBookingForm
 )
 
+from django.shortcuts import render, redirect
+from django.contrib.auth import login
+from .forms import CustomUserRegistrationForm  # ← импортируйте новую форму
+from django.core import serializers
+from django.http import JsonResponse
+
+@require_GET
+def games_by_date_api(request):
+    """API для получения игр по дате"""
+    date_str = request.GET.get('date')
+    
+    if not date_str:
+        return JsonResponse({'error': 'Не указана дата'}, status=400)
+    
+    try:
+        query_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return JsonResponse({'error': 'Неверный формат даты'}, status=400)
+    
+    # Получаем игры на указанную дату
+    games = Game.objects.filter(
+        game_date=query_date,
+        is_active=True
+    ).select_related('organizer').order_by('game_time')
+    
+    games_data = []
+    for game in games:
+        can_join = False
+        if request.user.is_authenticated:
+            can_join = (
+                game.organizer != request.user and 
+                not game.participants.filter(id=request.user.id).exists() and
+                game.participants.count() < game.max_players
+            )
+        
+        games_data.append({
+            'id': game.id,
+            'title': game.title,
+            'description': game.description or '',
+            'time': game.game_time.strftime('%H:%M'),
+            'location': game.location,
+            'participants': game.participants.count(),
+            'max_players': game.max_players,
+            'organizer': game.organizer.username,
+            'can_join': can_join,
+        })
+    
+    return JsonResponse({
+        'date': date_str,
+        'games': games_data,
+        'count': len(games_data)
+    })
+
+def register(request):
+    if request.method == 'POST':
+        form = CustomUserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            return redirect('home')  # или 'profile'
+    else:
+        form = CustomUserCreationForm()
+    return render(request, 'registration/register.html', {'form': form})
+
+@login_required
+def upload_player_avatar(request):
+    """Загрузка аватара игрока"""
+    if request.method == 'POST':
+        profile, created = UserProfile.objects.get_or_create(user=request.user)
+        form = AvatarUploadForm(request.POST, request.FILES, instance=profile)
+        
+        if form.is_valid():
+            form.save()
+            messages.success(request, '✅ Аватар успешно обновлён')
+        else:
+            messages.error(request, 'Ошибка при загрузке аватара')
+    
+    # Возвращаем обратно на страницу профиля
+    return redirect('profile', user_id=request.user.id)
 # ============================================================================
 # ОСНОВНЫЕ СТРАНИЦЫ
 # ============================================================================
@@ -865,7 +945,7 @@ def courts_api(request):
 
 @login_required
 def create_game(request):
-    """Создание новой игры"""
+    """Создание новой игры с привязкой к площадке"""
     
     if request.method == 'POST':
         form = GameCreationForm(request.POST, user=request.user)
@@ -876,11 +956,29 @@ def create_game(request):
                 game.organizer = request.user
                 game.is_active = True
                 
-                # Если выбрана площадка, проверяем ее доступность
-                if game.court:
+                # Если выбрана площадка, заполняем автоматически location
+                court = form.cleaned_data.get('court')
+                if court:
+                    game.court = court
+                    game.location = f"{court.name}, {court.address}"
+                    
                     # Проверяем, что площадка одобрена
-                    if game.court.status != 'approved':
+                    if court.status != 'approved':
                         messages.error(request, 'Выбранная площадка еще не одобрена')
+                        return redirect('create_game')
+                    
+                    # Проверяем доступность времени на площадке
+                    game_date = form.cleaned_data.get('game_date')
+                    game_time = form.cleaned_data.get('game_time')
+                    end_time = form.cleaned_data.get('end_time')
+                    
+                    # Проверяем время работы
+                    if game_time < court.opening_time:
+                        messages.error(request, f'Площадка открывается в {court.opening_time.strftime("%H:%M")}')
+                        return redirect('create_game')
+                    
+                    if end_time and end_time > court.closing_time:
+                        messages.error(request, f'Площадка закрывается в {court.closing_time.strftime("%H:%M")}')
                         return redirect('create_game')
                 
                 game.save()
@@ -893,6 +991,11 @@ def create_game(request):
                 )
                 
                 messages.success(request, f'✅ Игра "{game.title}" создана!')
+                
+                # Если игра привязана к площадке, показываем ссылку на нее
+                if game.court:
+                    messages.info(request, f'🏐 Игра привязана к площадке: <a href="/court/{game.court.id}/">{game.court.name}</a>')
+                
                 return redirect('game_detail', game_id=game.id)
                 
             except Exception as e:
@@ -1131,10 +1234,46 @@ def profile(request, user_id):
         'friendship_status': friendship_status,
         'organized_games': organized_games,
         'recent_bookings': recent_bookings,
-        'is_own_profile': request.user == user,
+        'is_own_profile': request.user == user,  # Это уже есть
     }
     
     return render(request, 'myapp/profile.html', context)
+
+@login_required
+def friends_list(request, user_id=None):
+    """Страница со всеми друзьями пользователя"""
+    if user_id:
+        user = get_object_or_404(User, id=user_id, is_active=True)
+    else:
+        user = request.user
+    
+    profile = get_object_or_404(UserProfile, user=user)
+    
+    # Получаем всех друзей
+    friends = User.objects.filter(
+        Q(friendships_sent__to_user=user, friendships_sent__status='accepted') |
+        Q(friendships_received__from_user=user, friendships_received__status='accepted')
+    ).distinct().order_by('username')
+    
+    # Получаем заявки в друзья (для текущего пользователя)
+    friend_requests = None
+    if request.user == user:
+        friend_requests = Friendship.objects.filter(
+            to_user=request.user,
+            status='pending'
+        ).select_related('from_user')
+    
+    context = {
+        'page_title': f'Друзья {user.username}',
+        'profile_user': user,
+        'profile': profile,
+        'friends': friends,
+        'friends_count': friends.count(),
+        'friend_requests': friend_requests,
+        'is_own_profile': request.user == user,
+    }
+    
+    return render(request, 'myapp/friends_list.html', context)
 
 @login_required
 def edit_profile(request):
@@ -1143,23 +1282,22 @@ def edit_profile(request):
     profile, created = UserProfile.objects.get_or_create(user=request.user)
     
     if request.method == 'POST':
-        form = ProfileEditForm(request.POST, instance=profile)
+        form = ProfileEditForm(request.POST, request.FILES, instance=profile)
         
         if form.is_valid():
             form.save()
             messages.success(request, '✅ Профиль успешно обновлён')
             return redirect('profile', user_id=request.user.id)
+        else:
+            messages.error(request, '❌ Пожалуйста, исправьте ошибки в форме')
     else:
         form = ProfileEditForm(instance=profile)
-    
-    # Форма загрузки аватара
-    avatar_form = AvatarUploadForm(instance=profile)
     
     context = {
         'page_title': 'Редактирование профиля',
         'form': form,
-        'avatar_form': avatar_form,
         'profile': profile,
+        'user': request.user,
     }
     
     return render(request, 'myapp/edit_profile.html', context)
@@ -1402,6 +1540,9 @@ def dashboard(request):
 # ============================================================================
 # АВТОРИЗАЦИЯ И РЕГИСТРАЦИЯ
 # ============================================================================
+def friends_list(request):
+    # Пока просто возвращаем пустую страницу
+    return render(request, 'friends_list.html')
 
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
@@ -1419,7 +1560,6 @@ def register(request):
             user = form.save()
             
             # Создаём профиль
-            UserProfile.objects.create(user=user, city='Москва')
             
             # Автоматически логиним пользователя
             login(request, user)
@@ -1506,3 +1646,107 @@ def handler403(request, exception):
 def handler400(request, exception):
     """Обработчик 400 ошибки"""
     return render(request, 'myapp/400.html', status=400)
+
+# ============================================================================
+# ФУНКЦИИ ДЛЯ ПРОФИЛЯ И ДРУЗЕЙ (добавьте эти функции в views.py)
+# ============================================================================
+
+def user_profile_view(request, user_id):
+    """Просмотр профиля пользователя"""
+    profile_user = get_object_or_404(User, id=user_id, is_active=True)
+    
+    # Определяем статус дружбы
+    friendship_status = 'none'
+    friendship = None
+    
+    if request.user.is_authenticated:
+        # Проверяем, есть ли заявка в друзья
+        friendship = Friendship.objects.filter(
+            (Q(from_user=request.user) & Q(to_user=profile_user)) |
+            (Q(from_user=profile_user) & Q(to_user=request.user))
+        ).first()
+        
+        if friendship:
+            friendship_status = friendship.status
+    
+    context = {
+        'page_title': f'Профиль пользователя {profile_user.username}',
+        'profile_user': profile_user,
+        'friendship_status': friendship_status,
+        'friendship': friendship,
+    }
+    
+    return render(request, 'myapp/profile_detail.html', context)
+
+@login_required
+def send_friend_request(request, user_id):
+    """Отправка заявки в друзья"""
+    to_user = get_object_or_404(User, id=user_id)
+    
+    # Нельзя отправлять заявку самому себе
+    if request.user == to_user:
+        return redirect('user_profile', user_id=user_id)
+    
+    # Проверяем, не отправили ли уже заявку
+    existing_request = Friendship.objects.filter(
+        from_user=request.user,
+        to_user=to_user
+    ).first()
+    
+    if not existing_request:
+        # Проверяем, нет ли уже обратной заявки
+        reverse_request = Friendship.objects.filter(
+            from_user=to_user,
+            to_user=request.user
+        ).first()
+        
+        if reverse_request:
+            # Если есть обратная заявка, принимаем ее
+            reverse_request.status = 'accepted'
+            reverse_request.save()
+        else:
+            # Создаем новую заявку
+            Friendship.objects.create(
+                from_user=request.user,
+                to_user=to_user,
+                status='pending'
+            )
+    
+    return redirect('user_profile', user_id=user_id)
+
+@login_required
+def cancel_friend_request(request, request_id):
+    """Отмена отправленной заявки"""
+    friendship = get_object_or_404(Friendship, id=request_id, from_user=request.user)
+    user_id = friendship.to_user.id
+    friendship.delete()
+    return redirect('user_profile', user_id=user_id)
+
+@login_required
+def accept_friend_request(request, request_id):
+    """Принятие заявки в друзья"""
+    friendship = get_object_or_404(Friendship, id=request_id, to_user=request.user)
+    friendship.status = 'accepted'
+    friendship.save()
+    return redirect('user_profile', user_id=friendship.from_user.id)
+
+@login_required
+def reject_friend_request(request, request_id):
+    """Отклонение заявки в друзья"""
+    friendship = get_object_or_404(Friendship, id=request_id, to_user=request.user)
+    user_id = friendship.from_user.id
+    friendship.delete()
+    return redirect('user_profile', user_id=user_id)
+
+@login_required
+def remove_friend(request, friendship_id):
+    """Удаление из друзей"""
+    friendship = get_object_or_404(Friendship, id=friendship_id)
+    
+    # Проверяем, что пользователь является участником дружбы
+    if friendship.from_user == request.user or friendship.to_user == request.user:
+        user_id = friendship.to_user.id if friendship.from_user == request.user else friendship.from_user.id
+        friendship.delete()
+        return redirect('user_profile', user_id=user_id)
+    
+    return redirect('friends')

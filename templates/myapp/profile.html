@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+        }
+        
+        .profile-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        
+        .profile-header {
+            background: linear-gradient(90deg, #4f46e5, #7c3aed);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            position: relative;
+        }
+        
+        .profile-avatar {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: 5px solid white;
+            margin: 0 auto 1rem;
+            overflow: hidden;
+            background: #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .profile-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .profile-avatar i {
+            font-size: 4rem;
+            color: #94a3b8;
+        }
+        
+        .profile-actions {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .profile-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            padding: 2rem;
+        }
+        
+        @media (max-width: 768px) {
+            .profile-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .profile-section {
+            background: #f8fafc;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .friends-section {
+            background: #f8fafc;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .friends-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .friend-item {
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        
+        .friend-item:hover {
+            transform: translateY(-5px);
+        }
+        
+        .friend-avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: 3px solid #4f46e5;
+            margin: 0 auto 0.5rem;
+            overflow: hidden;
+            background: #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .friend-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .friend-avatar i {
+            font-size: 2rem;
+            color: #94a3b8;
+        }
+        
+        .friend-name {
+            font-size: 0.85rem;
+            color: #1e293b;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .friend-city {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+        
+        .view-all-friends {
+            display: inline-block;
+            margin-top: 1rem;
+            color: #4f46e5;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .view-all-friends:hover {
+            text-decoration: underline;
+        }
+        
+        .no-friends {
+            text-align: center;
+            padding: 2rem;
+            color: #64748b;
+        }
+        
+        .no-friends-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: #cbd5e1;
+        }
+        
+        .profile-section h3 {
+            color: #4f46e5;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .info-label {
+            color: #64748b;
+            font-weight: 500;
+        }
+        
+        .info-value {
+            color: #1e293b;
+            font-weight: 500;
+            text-align: right;
+        }
+        
+        .empty-field {
+            color: #94a3b8;
+            font-style: italic;
+        }
+        
+        .edit-btn {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 0.5rem 1.5rem;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+            text-decoration: none;
+        }
+        
+        .edit-btn:hover {
+            background: #4338ca;
+            transform: translateY(-2px);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1rem;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #4f46e5;
+            display: block;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: #64748b;
+        }
+        
+        .game-item {
+            background: white;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid #4f46e5;
+        }
+        
+        .game-title {
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
+        
+        .game-meta {
+            display: flex;
+            gap: 1rem;
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="profile-container">
+        <!-- Шапка профиля -->
+        <div class="profile-header">
+            <div class="profile-avatar">
+                {% if profile.avatar %}
+                    <img src="{{ profile.avatar.url }}" alt="{{ profile_user.username }}">
+                {% else %}
+                    <i class="fas fa-user"></i>
+                {% endif %}
+            </div>
+            
+            <h1>{{ profile_user.get_full_name|default:profile_user.username }}</h1>
+            <p class="mb-0">
+                <i class="fas fa-map-marker-alt"></i> 
+                {{ profile.city|default:"Город не указан" }}
+                {% if profile.district %} • {{ profile.district }}{% endif %}
+            </p>
+            
+            <div class="profile-actions">
+                {% if is_own_profile %}
+                    <a href="{% url 'edit_profile' %}" class="edit-btn">
+                        <i class="fas fa-edit"></i> Редактировать
+                    </a>
+                {% else %}
+                    {% if is_friend %}
+                        <form action="{% url 'remove_friend' profile_user.id %}" method="post" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="edit-btn" style="background: #ef4444; border: none;">
+                                <i class="fas fa-user-minus"></i> Удалить из друзей
+                            </button>
+                        </form>
+                    {% else %}
+                        {% if friendship_status == 'pending' %}
+                            {% if friendship and friendship.from_user == request.user %}
+                                <button class="edit-btn" style="background: #f59e0b;" disabled>
+                                    <i class="fas fa-clock"></i> Запрос отправлен
+                                </button>
+                            {% elif friendship %}
+                                <a href="{% url 'accept_friend' friendship.id %}" class="edit-btn" style="background: #10b981;">
+                                    <i class="fas fa-check"></i> Принять заявку
+                                </a>
+                            {% endif %}
+                        {% else %}
+                            <a href="{% url 'add_friend' profile_user.id %}" class="edit-btn" style="background: #10b981;">
+                                <i class="fas fa-user-plus"></i> Добавить в друзья
+                            </a>
+                        {% endif %}
+                    {% endif %}
+                {% endif %}
+                
+                <a href="{% url 'home' %}" class="edit-btn" style="background: #64748b;">
+                    <i class="fas fa-home"></i> На главную
+                </a>
+            </div>
+        </div>
+        
+        <!-- Основное содержимое -->
+        <div class="profile-content">
+            <!-- Левая колонка: информация о пользователе -->
+            <div>
+                <!-- Статистика -->
+                <div class="profile-section">
+                    <h3><i class="fas fa-chart-line"></i> Статистика</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <span class="stat-number">{{ organized_games|length }}</span>
+                            <span class="stat-label">Организовал игр</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-number">{{ profile.playing_years|default:0 }}</span>
+                            <span class="stat-label">Лет в волейболе</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-number">{{ recent_bookings|length }}</span>
+                            <span class="stat-label">Бронирований</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-number">{{ friends_count }}</span>
+                            <span class="stat-label">Друзей</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Друзья -->
+                <div class="friends-section">
+                    <h3><i class="fas fa-user-friends"></i> Друзья 
+                        <span class="badge bg-primary rounded-pill" style="font-size: 0.8rem;">{{ friends_count }}</span>
+                    </h3>
+                    
+                    {% if friends_count > 0 %}
+                        <div class="friends-grid">
+                            {% for friend in friends %}
+                                <div class="friend-item" onclick="window.location.href='{% url 'profile' friend.id %}'">
+                                    <div class="friend-avatar">
+                                        {% if friend.profile.avatar %}
+                                            <img src="{{ friend.profile.avatar.url }}" alt="{{ friend.username }}">
+                                        {% else %}
+                                            <i class="fas fa-user"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="friend-name">{{ friend.get_full_name|default:friend.username|truncatechars:12 }}</div>
+                                    {% if friend.profile.city %}
+                                        <div class="friend-city">{{ friend.profile.city|truncatechars:10 }}</div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        
+                        {% if friends_count > 9 %}
+                            <a href="javascript:void(0)" class="view-all-friends" onclick="showAllFriends()">
+                                <i class="fas fa-eye"></i> Показать всех друзей ({{ friends_count }})
+                            </a>
+                        {% endif %}
+                    {% else %}
+                        <div class="no-friends">
+                            <div class="no-friends-icon">
+                                <i class="fas fa-user-friends"></i>
+                            </div>
+                            <p>
+                                {% if is_own_profile %}
+                                    У вас пока нет друзей. 
+                                    <a href="{% url 'search' %}">Найдите других игроков</a> и добавьте их в друзья!
+                                {% else %}
+                                    У пользователя пока нет друзей
+                                {% endif %}
+                            </p>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Информация о волейболе -->
+                <div class="profile-section">
+                    <h3><i class="fas fa-volleyball-ball"></i> Волейбольные данные</h3>
+                    
+                    <div class="info-row">
+                        <span class="info-label">Позиция:</span>
+                        <span class="info-value">
+                            {% if profile.position %}
+                                {{ profile.get_position_display }}
+                            {% else %}
+                                <span class="empty-field">Не указана</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">Уровень игры:</span>
+                        <span class="info-value">
+                            {% if profile.skill_level %}
+                                {{ profile.get_skill_level_display }}
+                            {% else %}
+                                <span class="empty-field">Не указан</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">Стаж:</span>
+                        <span class="info-value">
+                            {% if profile.playing_years %}
+                                {{ profile.playing_years }} лет
+                            {% else %}
+                                <span class="empty-field">Не указан</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">Рост:</span>
+                        <span class="info-value">
+                            {% if profile.height %}
+                                {{ profile.height }} см
+                            {% else %}
+                                <span class="empty-field">Не указан</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">Прыжок:</span>
+                        <span class="info-value">
+                            {% if profile.jump_reach %}
+                                {{ profile.jump_reach }} см
+                            {% else %}
+                                <span class="empty-field">Не указан</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">Стиль игры:</span>
+                        <span class="info-value">
+                            {% if profile.play_style %}
+                                {{ profile.play_style }}
+                            {% else %}
+                                <span class="empty-field">Не указан</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- Контактная информация -->
+                <div class="profile-section">
+                    <h3><i class="fas fa-address-book"></i> Контакты</h3>
+                    
+                    {% if is_own_profile or is_friend %}
+                        <div class="info-row">
+                            <span class="info-label">Email:</span>
+                            <span class="info-value">{{ profile_user.email }}</span>
+                        </div>
+                        
+                        {% if profile.telegram %}
+                        <div class="info-row">
+                            <span class="info-label">Telegram:</span>
+                            <span class="info-value">{{ profile.telegram }}</span>
+                        </div>
+                        {% endif %}
+                        
+                        {% if profile.vk %}
+                        <div class="info-row">
+                            <span class="info-label">ВКонтакте:</span>
+                            <span class="info-value">{{ profile.vk }}</span>
+                        </div>
+                        {% endif %}
+                        
+                        {% if profile.whatsapp %}
+                        <div class="info-row">
+                            <span class="info-label">WhatsApp:</span>
+                            <span class="info-value">{{ profile.whatsapp }}</span>
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <p style="color: #64748b; text-align: center;">
+                            <i class="fas fa-lock"></i> Контактная информация доступна только друзьям
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Правая колонка: активность -->
+            <div>
+                <!-- О себе -->
+                <div class="profile-section">
+                    <h3><i class="fas fa-user"></i> О себе</h3>
+                    {% if profile.bio %}
+                        <p style="color: #1e293b; line-height: 1.6;">{{ profile.bio|linebreaksbr }}</p>
+                    {% else %}
+                        <p class="empty-field" style="text-align: center;">
+                            {% if is_own_profile %}
+                                Расскажите о себе в <a href="{% url 'edit_profile' %}">редактировании профиля</a>
+                            {% else %}
+                                Пользователь еще не рассказал о себе
+                            {% endif %}
+                        </p>
+                    {% endif %}
+                </div>
+                
+                <!-- Организованные игры -->
+                <div class="profile-section">
+                    <h3><i class="fas fa-calendar-alt"></i> Последние игры</h3>
+                    {% if organized_games %}
+                        {% for game in organized_games %}
+                            <div class="game-item">
+                                <div class="game-title">{{ game.title }}</div>
+                                <div class="game-meta">
+                                    <span><i class="far fa-calendar"></i> {{ game.game_date }}</span>
+                                    <span><i class="far fa-clock"></i> {{ game.game_time }}</span>
+                                </div>
+                                <a href="{% url 'game_detail' game.id %}" style="color: #4f46e5; font-size: 0.9rem;">
+                                    <i class="fas fa-external-link-alt"></i> Подробнее
+                                </a>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="empty-field" style="text-align: center;">
+                            {% if is_own_profile %}
+                                <a href="{% url 'create_game' %}">Создайте первую игру</a>
+                            {% else %}
+                                Пользователь еще не организовал игр
+                            {% endif %}
+                        </p>
+                    {% endif %}
+                </div>
+                
+                <!-- Бронирования -->
+                <div class="profile-section">
+                    <h3><i class="fas fa-calendar-check"></i> Ближайшие бронирования</h3>
+                    {% if recent_bookings %}
+                        {% for booking in recent_bookings %}
+                            <div class="game-item">
+                                <div class="game-title">{{ booking.court.name }}</div>
+                                <div class="game-meta">
+                                    <span><i class="far fa-calendar"></i> {{ booking.booking_date }}</span>
+                                    <span><i class="far fa-clock"></i> {{ booking.start_time }}</span>
+                                    <span><i class="fas fa-users"></i> {{ booking.participants_count }} чел.</span>
+                                </div>
+                                <span style="color: #10b981; font-weight: 500;">
+                                    <i class="fas fa-check-circle"></i> {{ booking.get_status_display }}
+                                </span>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="empty-field" style="text-align: center;">
+                            {% if is_own_profile %}
+                                <a href="{% url 'map' %}">Забронируйте площадку</a>
+                            {% else %}
+                                Нет предстоящих бронирований
+                            {% endif %}
+                        </p>
+                    {% endif %}
+                </div>
+                
+                <!-- Дни для игр -->
+                <div class="profile-section">
+                    <h3><i class="fas fa-calendar-day"></i> Дни для игр</h3>
+                    {% if profile.play_days %}
+                        <p style="color: #1e293b;"><i class="far fa-calendar-check"></i> {{ profile.play_days }}</p>
+                    {% else %}
+                        <p class="empty-field" style="text-align: center;">
+                            {% if is_own_profile %}
+                                Укажите удобные дни в <a href="{% url 'edit_profile' %}">редактировании профиля</a>
+                            {% else %}
+                                Не указаны предпочтительные дни для игр
+                            {% endif %}
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Модальное окно для всех друзей -->
+    <div class="modal fade" id="allFriendsModal" tabindex="-1" aria-labelledby="allFriendsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="allFriendsModalLabel">
+                        <i class="fas fa-user-friends"></i> Все друзья ({{ friends_count }})
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row" id="friendsList">
+                        {% for friend in all_friends %}
+                            <div class="col-md-4 col-sm-6 mb-3">
+                                <div class="friend-item-modal" onclick="window.location.href='{% url 'profile' friend.id %}'" style="cursor: pointer;">
+                                    <div class="d-flex align-items-center p-2 border rounded">
+                                        <div class="friend-avatar" style="width: 50px; height: 50px; flex-shrink: 0;">
+                                            {% if friend.profile.avatar %}
+                                                <img src="{{ friend.profile.avatar.url }}" alt="{{ friend.username }}">
+                                            {% else %}
+                                                <i class="fas fa-user"></i>
+                                            {% endif %}
+                                        </div>
+                                        <div class="ms-3">
+                                            <div class="friend-name" style="font-weight: 500;">{{ friend.get_full_name|default:friend.username }}</div>
+                                            {% if friend.profile.city %}
+                                                <div class="friend-city" style="font-size: 0.8rem;">
+                                                    <i class="fas fa-map-marker-alt"></i> {{ friend.profile.city }}
+                                                </div>
+                                            {% endif %}
+                                            {% if friend.profile.position %}
+                                                <div class="friend-position" style="font-size: 0.8rem; color: #64748b;">
+                                                    <i class="fas fa-volleyball-ball"></i> {{ friend.profile.get_position_display }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Простые функции для взаимодействия
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Профиль загружен');
+            
+            // Подтверждение удаления друга
+            const removeFriendForms = document.querySelectorAll('form[action*="remove_friend"]');
+            removeFriendForms.forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    if (!confirm('Вы уверены, что хотите удалить пользователя из друзей?')) {
+                        e.preventDefault();
+                    }
+                });
+            });
+        });
+        
+        function showAllFriends() {
+            const modal = new bootstrap.Modal(document.getElementById('allFriendsModal'));
+            modal.show();
+        }
+        
+        // Поиск друзей в модальном окне
+        function searchFriends() {
+            const input = document.getElementById('friendSearchInput');
+            const filter = input.value.toLowerCase();
+            const friends = document.getElementById('friendsList').getElementsByClassName('friend-item-modal');
+            
+            for (let i = 0; i < friends.length; i++) {
+                const friend = friends[i];
+                const text = friend.textContent || friend.innerText;
+                if (text.toLowerCase().indexOf(filter) > -1) {
+                    friend.parentElement.style.display = '';
+                } else {
+                    friend.parentElement.style.display = 'none';
+                }
+            }
+        }
+    </script>
+</body>
+</html>

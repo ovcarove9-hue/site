@@ -5,6 +5,38 @@ from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
 import uuid
 
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.contrib.auth.models import User
+
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        UserProfile.objects.create(user=instance)
+
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    try:
+        instance.profile.save()
+    except UserProfile.DoesNotExist:
+        UserProfile.objects.create(user=instance)
+
+class Court(models.Model):
+    name = models.CharField(max_length=200)
+    address = models.CharField(max_length=300)
+    district = models.CharField(max_length=100)
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+    court_type = models.CharField(max_length=20, choices=[
+        ('indoor', 'Закрытый зал'),
+        ('outdoor', 'Открытая площадка'),
+        ('beach', 'Пляжная площадка'),
+    ])
+    is_active = models.BooleanField(default=True)  # только активные площадки можно выбрать
+
+    def __str__(self):
+        return self.name
+
 class VolleyballCourt(models.Model):
     SURFACE_TYPES = [
         ('sand', 'Песок'),
@@ -630,7 +662,42 @@ class UserProfile(models.Model):
     bio = models.TextField('О себе', blank=True)
     city = models.CharField('Город', max_length=100, blank=True, default="Москва")
     age = models.PositiveIntegerField('Возраст', null=True, blank=True)
-
+    district = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name='Район проживания'
+    )
+    
+    age = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        verbose_name='Возраст',
+        validators=[MinValueValidator(14), MaxValueValidator(100)]
+    )
+    
+    skill_level = models.CharField(
+        max_length=20,
+        choices=SKILL_LEVEL_CHOICES,
+        default='beginner',
+        verbose_name='Уровень игры'
+    )
+    
+    bio = models.TextField(
+        max_length=500,
+        blank=True,
+        null=True,
+        verbose_name='О себе'
+    )
+    
+    favorite_court = models.ForeignKey(
+        'VolleyballCourt',
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='favorited_by',
+        verbose_name='Любимая площадка'
+    )
     # Волейбольная специализация
     position = models.CharField(
         'Основная позиция', 

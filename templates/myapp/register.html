@@ -117,31 +117,95 @@
                 </div>
             {% endif %}
             
+            <!-- Имя пользователя -->
             <div class="mb-3">
                 <label for="id_username" class="form-label">
                     <i class="fas fa-user"></i> Имя пользователя
                 </label>
-                {{ form.username }}
+                <input type="text" 
+                       name="username" 
+                       id="id_username" 
+                       class="form-control" 
+                       placeholder="Введите имя пользователя"
+                       {% if form.username.value %}value="{{ form.username.value }}"{% endif %}>
                 {% if form.username.help_text %}
                     <span class="helptext">{{ form.username.help_text }}</span>
                 {% endif %}
             </div>
             
+            <!-- Фамилия -->
+            <div class="mb-3">
+                <label for="id_last_name" class="form-label">
+                    <i class="fas fa-user-tag"></i> Фамилия
+                </label>
+                <input type="text" 
+                       name="last_name" 
+                       id="id_last_name" 
+                       class="form-control" 
+                       placeholder="Введите вашу фамилию"
+                       {% if form.last_name.value %}value="{{ form.last_name.value }}"{% endif %}>
+                {% if form.last_name.help_text %}
+                    <span class="helptext">{{ form.last_name.help_text }}</span>
+                {% endif %}
+            </div>
+            
+            <!-- Email -->
+            <div class="mb-3">
+                <label for="id_email" class="form-label">
+                    <i class="fas fa-envelope"></i> Email
+                </label>
+                <input type="email" 
+                       name="email" 
+                       id="id_email" 
+                       class="form-control" 
+                       placeholder="Введите ваш email"
+                       {% if form.email.value %}value="{{ form.email.value }}"{% endif %}>
+                {% if form.email.help_text %}
+                    <span class="helptext">{{ form.email.help_text }}</span>
+                {% endif %}
+            </div>
+            
+            <!-- Позиция -->
+            <div class="mb-3">
+                <label for="id_position" class="form-label">
+                    <i class="fas fa-volleyball-ball"></i> Позиция в волейболе
+                </label>
+                <input type="text" 
+                       name="position" 
+                       id="id_position" 
+                       class="form-control" 
+                       placeholder="Например: нападающий, связующий и т.д."
+                       {% if form.position.value %}value="{{ form.position.value }}"{% endif %}>
+                {% if form.position.help_text %}
+                    <span class="helptext">{{ form.position.help_text }}</span>
+                {% endif %}
+            </div>
+            
+            <!-- Пароль -->
             <div class="mb-3">
                 <label for="id_password1" class="form-label">
                     <i class="fas fa-lock"></i> Пароль
                 </label>
-                {{ form.password1 }}
+                <input type="password" 
+                       name="password1" 
+                       id="id_password1" 
+                       class="form-control" 
+                       placeholder="Введите пароль">
                 {% if form.password1.help_text %}
                     <span class="helptext">{{ form.password1.help_text }}</span>
                 {% endif %}
             </div>
             
+            <!-- Подтверждение пароля -->
             <div class="mb-3">
                 <label for="id_password2" class="form-label">
                     <i class="fas fa-lock"></i> Подтверждение пароля
                 </label>
-                {{ form.password2 }}
+                <input type="password" 
+                       name="password2" 
+                       id="id_password2" 
+                       class="form-control" 
+                       placeholder="Повторите пароль">
                 {% if form.password2.help_text %}
                     <span class="helptext">{{ form.password2.help_text }}</span>
                 {% endif %}

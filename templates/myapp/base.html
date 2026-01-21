@@ -15,7 +15,7 @@
         const originalError = window.onerror;
         window.onerror = function(msg, url, line, col, error) {
             if (msg && typeof msg === 'string' && (
-                msg.includes('asynchronous response') || 
+                msg.includes('asynchronous response') ||
                 msg.includes('message channel closed')
             )) {
                 console.log('[Игнорировано] Ошибка расширения браузера');
@@ -28,52 +28,13 @@
         
         // 2. Блокируем unhandled promise rejections
         window.addEventListener('unhandledrejection', function(e) {
-            if (e.reason && e.reason.message && 
+            if (e.reason && e.reason.message &&
                 e.reason.message.includes('asynchronous response')) {
                 e.preventDefault();
                 console.log('[Игнорировано] Promise rejection от расширения');
                 return true;
             }
         });
-        
-        // 3. Безопасная подмена chrome API если существует
-        if (typeof chrome !== 'undefined') {
-            try {
-                const safeChrome = {
-                    runtime: {
-                        sendMessage: function() {
-                            return new Promise(resolve => resolve());
-                        },
-                        connect: function() {
-                            return {
-                                postMessage: function() {},
-                                onMessage: { addListener: function() {} },
-                                onDisconnect: { addListener: function() {} },
-                                disconnect: function() {}
-                            };
-                        },
-                        onMessage: { 
-                            addListener: function() {},
-                            removeListener: function() {}
-                        }
-                    }
-                };
-                
-                // Пытаемся безопасно заменить
-                try {
-                    Object.defineProperty(window, 'chrome', {
-                        value: safeChrome,
-                        writable: false,
-                        configurable: false
-                    });
-                } catch(e) {
-                    // Если не получается, просто игнорируем
-                    window.chrome = safeChrome;
-                }
-            } catch(e) {
-                console.log('Chrome API фикс применен');
-            }
-        }
         
         console.log('[SYSTEM] Защита от ошибок расширений активирована');
     })();
@@ -204,6 +165,12 @@
             padding: 20px;
             margin-bottom: 15px;
             border-left: 5px solid #667eea;
+            transition: transform 0.3s;
+        }
+        
+        .game-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
         
         .game-item h4 {
@@ -287,6 +254,13 @@
             background: #f8f9fa;
             border-radius: 10px;
             margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .user-item:hover {
+            background: #e2e8f0;
+            transform: translateX(5px);
         }
         
         .user-avatar {
@@ -299,16 +273,32 @@
             justify-content: center;
             color: white;
             font-weight: bold;
+            overflow: hidden;
+        }
+        
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
         
         .user-info h5 {
             margin: 0;
             color: #2d3748;
+            font-size: 0.95rem;
         }
         
         .user-info span {
             font-size: 0.8rem;
             color: #718096;
+        }
+        
+        .online-indicator {
+            width: 8px;
+            height: 8px;
+            background: #48bb78;
+            border-radius: 50%;
+            margin-left: auto;
         }
         
         .messages {
@@ -392,15 +382,47 @@
             }
         }
         
-        /* КАЛЕНДАРЬ - ТОЛЬКО БАЗОВЫЕ СТИЛИ */
+        /* КАЛЕНДАРЬ */
+        .calendar-container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+            margin-bottom: 30px;
+        }
+        
         .calendar-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 10px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .calendar-nav-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .calendar-nav-btn:hover {
+            background: #5a67d8;
+            transform: scale(1.1);
+        }
+        
+        .calendar-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #2d3748;
         }
         
         .calendar-weekdays {
@@ -409,12 +431,12 @@
             gap: 5px;
             margin-bottom: 10px;
             text-align: center;
+            font-weight: 600;
+            color: #718096;
         }
         
         .weekday {
             padding: 10px;
-            font-weight: 600;
-            color: #718096;
         }
         
         .calendar-days {
@@ -424,22 +446,122 @@
         }
         
         .calendar-day {
-            height: 80px;
-            border-radius: 8px;
-            border: 1px solid #e2e8f0;
-            padding: 8px;
+            min-height: 100px;
+            border-radius: 12px;
+            border: 2px solid #e2e8f0;
+            padding: 10px;
             background: white;
-        }
-        
-        .calendar-day.has-game {
-            border: 2px solid #667eea;
-            background: #e9d8fd;
+            position: relative;
+            transition: all 0.3s;
             cursor: pointer;
         }
         
-        .calendar-day.today {
-            background: #fed7d7 !important;
-            border-color: #e53e3e !important;
+        .calendar-day:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .calendar-day.empty {
+            background: #f8f9fa;
+            border-color: #f1f5f9;
+            cursor: default;
+        }
+        
+        .calendar-day.empty:hover {
+            transform: none;
+            box-shadow: none;
+            border-color: #f1f5f9;
+        }
+        
+        .day-number {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+        
+        .calendar-day.today .day-number {
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px;
+        }
+        
+        .calendar-day.has-games {
+            border-color: #667eea;
+            background: #f0f5ff;
+        }
+        
+        .day-games {
+            max-height: 60px;
+            overflow-y: auto;
+        }
+        
+        .day-game {
+            font-size: 0.7rem;
+            background: #667eea;
+            color: white;
+            padding: 2px 5px;
+            border-radius: 4px;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: pointer;
+        }
+        
+        .day-game:hover {
+            background: #5a67d8;
+        }
+        
+        .game-count {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #48bb78;
+            color: white;
+            font-size: 0.7rem;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Модальное окно для игр дня */
+        .modal-game-item {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .modal-game-title {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+        
+        .modal-game-meta {
+            display: flex;
+            gap: 10px;
+            color: #718096;
+            font-size: 0.85rem;
+        }
+        
+        .no-games {
+            color: #718096;
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
         }
     </style>
 </head>
@@ -450,23 +572,21 @@
             <h1><i class="fas fa-volleyball-ball"></i> Волейбольный клуб</h1>
             <p>Сообщество волейболистов: игры, тренировки, турниры. Найди партнёров для игры!</p>
             
-            <!-- ИСПРАВЛЕННАЯ НАВИГАЦИЯ -->
+            <!-- Навигация -->
             <div class="nav">
                 <a href="/"><i class="fas fa-home"></i> Главная</a>
-                <a href="/map/"><i class="fas fa-map-marked-alt"></i> Карта площадок</a>
-                <a href="/create_game/"><i class="fas fa-plus-circle"></i> Создать игру</a>
-                <a href="/search/"><i class="fas fa-search"></i> Поиск игроков</a>
-                <a href="/suggest_court/"><i class="fas fa-plus-circle"></i> Предложить площадку</a>
-                <a href="/my_suggestions/"><i class="fas fa-list"></i> Мои предложения</a>
+                <a href="{% url 'map' %}"><i class="fas fa-map-marked-alt"></i> Карта площадок</a>
+                <a href="{% url 'create_game' %}"><i class="fas fa-plus-circle"></i> Создать игру</a>
+                <a href="{% url 'search' %}"><i class="fas fa-search"></i> Поиск игроков</a>
                 
                 {% if user.is_authenticated %}
                     {% if user.id %}
-                        <a href="/profile/{{ user.id }}/"><i class="fas fa-user"></i> Мой профиль</a>
+                        <a href="{% url 'profile' user.id %}"><i class="fas fa-user"></i> Мой профиль</a>
                     {% endif %}
-                    <a href="/logout/"><i class="fas fa-sign-out-alt"></i> Выйти</a>
+                    <a href="{% url 'logout' %}"><i class="fas fa-sign-out-alt"></i> Выйти</a>
                 {% else %}
-                    <a href="/login/"><i class="fas fa-sign-in-alt"></i> Войти</a>
-                    <a href="/register/"><i class="fas fa-user-plus"></i> Регистрация</a>
+                    <a href="{% url 'login' %}"><i class="fas fa-sign-in-alt"></i> Войти</a>
+                    <a href="{% url 'register' %}"><i class="fas fa-user-plus"></i> Регистрация</a>
                 {% endif %}
             </div>
         </div>
@@ -488,10 +608,10 @@
             <p style="font-size: 1.2rem; opacity: 0.9;">Место, где волейболисты находят партнёров, игры и новые знакомства</p>
             {% if not user.is_authenticated %}
             <div style="margin-top: 20px;">
-                <a href="/register/" style="background: white; color: #667eea; padding: 12px 30px; border-radius: 50px; text-decoration: none; font-weight: 600; display: inline-block; margin: 0 10px;">
+                <a href="{% url 'register' %}" style="background: white; color: #667eea; padding: 12px 30px; border-radius: 50px; text-decoration: none; font-weight: 600; display: inline-block; margin: 0 10px;">
                     Присоединиться
                 </a>
-                <a href="/search/" style="background: transparent; border: 2px solid white; color: white; padding: 12px 30px; border-radius: 50px; text-decoration: none; font-weight: 600; display: inline-block; margin: 0 10px;">
+                <a href="{% url 'search' %}" style="background: transparent; border: 2px solid white; color: white; padding: 12px 30px; border-radius: 50px; text-decoration: none; font-weight: 600; display: inline-block; margin: 0 10px;">
                     Найти игроков
                 </a>
             </div>
@@ -508,77 +628,39 @@
                     <div class="stats-grid">
                         <div class="stat-card">
                             <i class="fas fa-users"></i>
-                            <h3>1,247</h3>
+                            <h3>{{ total_users }}</h3>
                             <p>Активных игроков</p>
                         </div>
                         <div class="stat-card">
                             <i class="fas fa-calendar-alt"></i>
-                            <h3>89</h3>
-                            <p>Игр на этой неделе</p>
+                            <h3>{{ total_games }}</h3>
+                            <p>Всего игр</p>
                         </div>
                         <div class="stat-card">
                             <i class="fas fa-map-marker-alt"></i>
-                            <h3>42</h3>
+                            <h3>{{ total_courts }}</h3>
                             <p>Площадок в базе</p>
                         </div>
                         <div class="stat-card">
                             <i class="fas fa-trophy"></i>
-                            <h3>15</h3>
-                            <p>Турниров в этом месяце</p>
+                            <h3>{{ upcoming_games|length }}</h3>
+                            <p>Ближайших игр</p>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Ближайшие игры -->
-                <div class="content-box">
-                    <h3><i class="fas fa-volleyball-ball"></i> Ближайшие игры</h3>
-                    <div class="games-list">
-                        <div class="game-item">
-                            <h4>Вечерний волейбол в "Спартаке"</h4>
-                            <p>Смешанная группа, средний уровень. Крытый зал, профессиональное покрытие.</p>
-                            <div class="game-meta">
-                                <span><i class="far fa-calendar"></i> Сегодня, 19:00</span>
-                                <span><i class="fas fa-map-marker-alt"></i> Москва, ул. Спортивная, 15</span>
-                                <span><i class="fas fa-user-friends"></i> 8/12 игроков</span>
-                            </div>
-                            <button class="btn-join" onclick="handleJoinClick(this)">Присоединиться</button>
-                        </div>
-                        
-                        <div class="game-item">
-                            <h4>Тренировка для начинающих</h4>
-                            <p>Под руководством опытного тренера. Все необходимое предоставляется.</p>
-                            <div class="game-meta">
-                                <span><i class="far fa-calendar"></i> Завтра, 18:00</span>
-                                <span><i class="fas fa-map-marker-alt"></i> Санкт-Петербург, пр. Победы, 10</span>
-                                <span><i class="fas fa-user-friends"></i> 5/10 игроков</span>
-                            </div>
-                            <button class="btn-join" onclick="handleJoinClick(this)">Присоединиться</button>
-                        </div>
-                        
-                        <div class="game-item">
-                            <h4>Пляжный волейбол на "Волне"</h4>
-                            <p>Летняя площадка, песок, сетка. Бесплатно, приносите свои мячи.</p>
-                            <div class="game-meta">
-                                <span><i class="far fa-calendar"></i> Суббота, 14:00</span>
-                                <span><i class="fas fa-map-marker-alt"></i> Сочи, Пляжная аллея, 5</span>
-                                <span><i class="fas fa-user-friends"></i> 10/16 игроков</span>
-                            </div>
-                            <button class="btn-join" onclick="handleJoinClick(this)">Присоединиться</button>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Календарь (упрощенный) -->
-                <div class="content-box">
-                    <h3><i class="fas fa-calendar-alt"></i> Календарь игр</h3>
+                <!-- Календарь игр -->
+                <div class="calendar-container">
                     <div class="calendar-header">
-                        <button class="btn btn-sm btn-outline-secondary" onclick="alert('Предыдущий месяц')">
+                        <a href="?year={{ calendar.prev_year }}&month={{ calendar.prev_month }}" class="calendar-nav-btn">
                             <i class="fas fa-chevron-left"></i>
-                        </button>
-                        <h4 style="margin: 0; color: #2d3748;">Декабрь 2025</h4>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="alert('Следующий месяц')">
+                        </a>
+                        <div class="calendar-title">
+                            {{ calendar.month_name }} {{ calendar.year }}
+                        </div>
+                        <a href="?year={{ calendar.next_year }}&month={{ calendar.next_month }}" class="calendar-nav-btn">
                             <i class="fas fa-chevron-right"></i>
-                        </button>
+                        </a>
                     </div>
                     
                     <div class="calendar-weekdays">
@@ -592,12 +674,69 @@
                     </div>
                     
                     <div class="calendar-days">
-                        <!-- Простой календарь без сложной логики -->
-                        {% for day in "12345678910111213141516171819202122232425262728293031"|make_list %}
-                        <div class="calendar-day {% if forloop.counter <= 5 %}has-game{% endif %}">
-                            <div class="day-number">{{ day }}</div>
-                        </div>
+                        {% for week in calendar.days_with_games %}
+                            {% for day_data in week %}
+                                {% if day_data.day == 0 %}
+                                    <div class="calendar-day empty"></div>
+                                {% else %}
+                                    <div class="calendar-day {% if day_data.day == calendar.today.day and calendar.month == calendar.today.month and calendar.year == calendar.today.year %}today{% endif %} {% if day_data.games %}has-games{% endif %}"
+                                         onclick="showDayGames({{ day_data.day }}, {{ calendar.month }}, {{ calendar.year }})">
+                                        <div class="day-number">{{ day_data.day }}</div>
+                                        {% if day_data.games %}
+                                            <div class="game-count">{{ day_data.games|length }}</div>
+                                            <div class="day-games">
+                                                {% for game in day_data.games|slice:":3" %}
+                                                    <div class="day-game" onclick="event.stopPropagation(); window.location.href='{% url 'game_detail' game.id %}'">
+                                                        {{ game.title|truncatechars:15 }}
+                                                    </div>
+                                                {% endfor %}
+                                                {% if day_data.games|length > 3 %}
+                                                    <div class="day-game" style="background: #718096;">
+                                                        +{{ day_data.games|length|add:"-3" }} ещё
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
                         {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- Ближайшие игры -->
+                <div class="content-box">
+                    <h3><i class="fas fa-volleyball-ball"></i> Ближайшие игры</h3>
+                    <div class="games-list">
+                        {% if upcoming_games %}
+                            {% for game in upcoming_games %}
+                                <div class="game-item">
+                                    <h4>{{ game.title }}</h4>
+                                    <p>{{ game.description|truncatechars:100|default:"Описание отсутствует" }}</p>
+                                    <div class="game-meta">
+                                        <span><i class="far fa-calendar"></i> {{ game.game_date }} {{ game.game_time }}</span>
+                                        <span><i class="fas fa-map-marker-alt"></i> {{ game.location|truncatechars:20 }}</span>
+                                        <span><i class="fas fa-user-friends"></i> {{ game.participants.count }}/{{ game.max_players }} игроков</span>
+                                    </div>
+                                    {% if user.is_authenticated %}
+                                        {% if game.organizer != user and user not in game.participants.all %}
+                                            <a href="{% url 'join_game' game.id %}" class="btn-join">Присоединиться</a>
+                                        {% elif user in game.participants.all %}
+                                            <button class="btn-join" style="background: #718096;" disabled>Вы уже участвуете</button>
+                                        {% endif %}
+                                    {% else %}
+                                        <a href="{% url 'login' %}?next={{ request.path }}" class="btn-join">Войдите для участия</a>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="no-games">
+                                <p><i class="fas fa-calendar-times"></i> Нет запланированных игр</p>
+                                {% if user.is_authenticated %}
+                                    <a href="{% url 'create_game' %}" class="btn-join" style="margin-top: 10px;">Создать первую игру</a>
+                                {% endif %}
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -610,14 +749,14 @@
                     <a href="{% url 'create_game' %}" class="nav-link">
                         <i class="fas fa-calendar-plus me-1"></i> Создать игру
                     </a>
-                    <a href="/search/">
+                    <a href="{% url 'search' %}">
                         <i class="fas fa-search"></i> Найти игроков
                     </a>
-                    <a href="/map/">
+                    <a href="{% url 'map' %}">
                         <i class="fas fa-map"></i> Карта площадок
                     </a>
                     {% if user.is_authenticated and user.id %}
-                    <a href="/profile/{{ user.id }}/">
+                    <a href="{% url 'profile' user.id %}">
                         <i class="fas fa-edit"></i> Редактировать профиль
                     </a>
                     {% endif %}
@@ -626,28 +765,53 @@
                 <!-- Онлайн пользователи -->
                 <div class="online-users">
                     <h3><i class="fas fa-wifi"></i> Сейчас онлайн</h3>
-                    <div class="user-item">
-                        <div class="user-avatar">АК</div>
-                        <div class="user-info">
-                            <h5>Алексей К.</h5>
-                            <span>Диагональный • Москва</span>
+                    {% if online_users %}
+                        {% for online_user in online_users %}
+                            <div class="user-item" onclick="window.location.href='{% url 'profile' online_user.id %}'">
+                                <div class="user-avatar">
+                                    {% if online_user.profile.avatar %}
+                                        <img src="{{ online_user.profile.avatar.url }}" alt="{{ online_user.username }}">
+                                    {% else %}
+                                        {{ online_user.username|slice:":2"|upper }}
+                                    {% endif %}
+                                </div>
+                                <div class="user-info">
+                                    <h5>{{ online_user.get_full_name|default:online_user.username|truncatechars:15 }}</h5>
+                                    <span>
+                                        {% if online_user.profile.city %}
+                                            {{ online_user.profile.city }}
+                                        {% else %}
+                                            Город не указан
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                <div class="online-indicator" title="В сети"></div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="no-games">
+                            <p><i class="fas fa-user-slash"></i> Нет пользователей онлайн</p>
                         </div>
-                    </div>
-                    <div class="user-item">
-                        <div class="user-avatar">МС</div>
-                        <div class="user-info">
-                            <h5>Мария С.</h5>
-                            <span>Связующий • СПб</span>
-                        </div>
-                    </div>
-                    <div class="user-item">
-                        <div class="user-avatar">ДИ</div>
-                        <div class="user-info">
-                            <h5>Дмитрий И.</h5>
-                            <span>Либеро • Казань</span>
-                        </div>
-                    </div>
+                    {% endif %}
                 </div>
+                
+                <!-- Мои предстоящие бронирования -->
+                {% if user.is_authenticated and upcoming_bookings %}
+                <div class="quick-actions" style="margin-top: 30px;">
+                    <h3><i class="fas fa-calendar-check"></i> Мои бронирования</h3>
+                    {% for booking in upcoming_bookings %}
+                        <div class="user-item" onclick="window.location.href='{% url 'booking_detail' booking.id %}'">
+                            <div class="user-avatar" style="background: #48bb78;">
+                                <i class="fas fa-calendar-alt"></i>
+                            </div>
+                            <div class="user-info">
+                                <h5>{{ booking.court.name|truncatechars:15 }}</h5>
+                                <span>{{ booking.booking_date }} {{ booking.start_time }}</span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
                 
                 <!-- Быстрые ссылки -->
                 <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
@@ -669,65 +833,167 @@
         
         <!-- Подвал -->
         <div class="footer">
-            <p><i class="fas fa-volleyball-ball"></i> Волейбольный клуб © 2025 | Все игры пользователей отображаются в календаре | v3.0</p>
+            <p><i class="fas fa-volleyball-ball"></i> Волейбольный клуб © 2026 | Все игры пользователей отображаются в календаре | v3.0</p>
             <p style="margin-top: 10px; font-size: 0.8rem;">
-                <a href="#" style="color: #718096; margin: 0 10px; text-decoration: none;">Правила сообщества</a> | 
-                <a href="#" style="color: #718096; margin: 0 10px; text-decoration: none;">Контакты</a> | 
+                <a href="#" style="color: #718096; margin: 0 10px; text-decoration: none;">Правила сообщества</a> |
+                <a href="#" style="color: #718096; margin: 0 10px; text-decoration: none;">Контакты</a> |
                 <a href="#" style="color: #718096; margin: 0 10px; text-decoration: none;">Помощь</a>
             </p>
+        </div>
+    </div>
+    
+    <!-- Модальное окно для игр дня -->
+    <div class="modal fade" id="dayGamesModal" tabindex="-1" aria-labelledby="dayGamesModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="dayGamesModalLabel">Игры на <span id="modal-date"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="modal-games-list">
+                    <!-- Список игр будет загружен здесь -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                </div>
+            </div>
         </div>
     </div>
     
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     
-    <!-- БЕЗОПАСНЫЙ МИНИМАЛЬНЫЙ JAVASCRIPT -->
+    <!-- JavaScript для календаря -->
     <script>
-    // Простые и безопасные функции
-    function handleJoinClick(button) {
-        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Обработка...';
-        button.disabled = true;
-        
-        setTimeout(function() {
-            button.innerHTML = '<i class="fas fa-check"></i> Заявка отправлена';
-            button.style.background = '#48bb78';
+        // Показ игр для выбранного дня
+        async function showDayGames(day, month, year) {
+            const dateStr = `${day}.${month}.${year}`;
+            document.getElementById('modal-date').textContent = dateStr;
             
-            // Через 3 секунды возвращаем исходное состояние
-            setTimeout(function() {
-                button.innerHTML = 'Присоединиться';
-                button.style.background = '';
-                button.disabled = false;
-            }, 3000);
-        }, 1000);
-    }
-    
-    // Простая инициализация при загрузке
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('Волейбольный клуб загружен');
-        
-        // Подсветка сегодняшнего дня в календаре
-        const today = new Date();
-        const todayDate = today.getDate();
-        
-        document.querySelectorAll('.day-number').forEach(dayEl => {
-            if (parseInt(dayEl.textContent) === todayDate) {
-                dayEl.parentElement.classList.add('today');
+            // Показываем загрузку
+            document.getElementById('modal-games-list').innerHTML = `
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Загрузка...</span>
+                    </div>
+                    <p class="mt-2">Загрузка игр...</p>
+                </div>
+            `;
+            
+            // Показываем модальное окно
+            const modal = new bootstrap.Modal(document.getElementById('dayGamesModal'));
+            modal.show();
+            
+            try {
+                // Загружаем игры через API
+                const response = await fetch(`/api/games-by-date/?date=${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`);
+                const data = await response.json();
+                
+                if (data.games && data.games.length > 0) {
+                    let gamesHtml = '';
+                    data.games.forEach(game => {
+                        gamesHtml += `
+                            <div class="modal-game-item">
+                                <div class="modal-game-title">${game.title}</div>
+                                <div class="modal-game-meta">
+                                    <span><i class="far fa-clock"></i> ${game.time}</span>
+                                    <span><i class="fas fa-map-marker-alt"></i> ${game.location}</span>
+                                    <span><i class="fas fa-user-friends"></i> ${game.participants}/${game.max_players}</span>
+                                </div>
+                                <p style="font-size: 0.9rem; color: #718096; margin-top: 5px;">${game.description || 'Описание отсутствует'}</p>
+                                <button class="btn btn-sm btn-primary mt-2" onclick="window.location.href='/game/${game.id}/'">
+                                    <i class="fas fa-external-link-alt"></i> Подробнее
+                                </button>
+                                {% if user.is_authenticated %}
+                                    ${game.can_join ? `<button class="btn btn-sm btn-success mt-2 ms-2" onclick="joinGame(${game.id})">
+                                        <i class="fas fa-user-plus"></i> Присоединиться
+                                    </button>` : ''}
+                                {% endif %}
+                            </div>
+                        `;
+                    });
+                    document.getElementById('modal-games-list').innerHTML = gamesHtml;
+                } else {
+                    document.getElementById('modal-games-list').innerHTML = `
+                        <div class="no-games">
+                            <p><i class="fas fa-calendar-times"></i> Нет игр на этот день</p>
+                            <a href="{% url 'create_game' %}" class="btn btn-primary mt-3">Создать игру</a>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки игр:', error);
+                document.getElementById('modal-games-list').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i> Ошибка загрузки игр
+                    </div>
+                `;
             }
-        });
+        }
         
-        // Простые клики по дням календаря
-        document.querySelectorAll('.calendar-day.has-game').forEach(day => {
-            day.addEventListener('click', function() {
-                const dayNum = this.querySelector('.day-number').textContent;
-                alert('Игры на ' + dayNum + ' декабря:\n• Вечерний волейбол (19:00)\n• Тренировка (20:00)');
-            });
+        // Функция присоединения к игре
+        async function joinGame(gameId) {
+            try {
+                const response = await fetch(`/game/${gameId}/join/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({})
+                });
+                
+                if (response.ok) {
+                    alert('Вы успешно присоединились к игре!');
+                    location.reload();
+                } else {
+                    const data = await response.json();
+                    alert(data.error || 'Ошибка при присоединении к игре');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                alert('Ошибка сети');
+            }
+        }
+        
+        // Функция для получения CSRF токена
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        // Обработка кнопок присоединения
+        function handleJoinClick(button) {
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Обработка...';
+            button.disabled = true;
+            
+            setTimeout(function() {
+                button.innerHTML = '<i class="fas fa-check"></i> Заявка отправлена';
+                button.style.background = '#48bb78';
+                
+                setTimeout(function() {
+                    button.innerHTML = originalText;
+                    button.style.background = '';
+                    button.disabled = false;
+                }, 3000);
+            }, 1000);
+        }
+        
+        // Инициализация при загрузке
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Волейбольный клуб загружен');
         });
-    });
-    
-    // Глобальная функция для кнопок
-    window.showAlert = function(message) {
-        alert(message);
-    };
     </script>
 </body>
 </html>

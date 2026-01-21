@@ -1,4 +1,5 @@
 # myapp/forms.py
+
 from django import forms
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
@@ -6,25 +7,265 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 import re
 from datetime import datetime, timedelta, date
-
+from django.contrib.auth.forms import UserCreationForm
+from django.db.models import Q
 from .models import (
-    UserProfile, 
-    VolleyballCourt, 
-    Game, 
-    GameParticipation, 
+    UserProfile,
+    VolleyballCourt,
+    Game,
+    GameParticipation,
     CourtPhoto,
     CourtBooking,
     TimeSlot,
     Review
 )
 
+class PlayerProfileForm(forms.ModelForm):
+    """Форма редактирования профиля игрока"""
+    
+    first_name = forms.CharField(
+        max_length=30,
+        required=False,
+        label='Имя',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ваше имя'
+        })
+    )
+    
+    last_name = forms.CharField(
+        max_length=30,
+        required=False,
+        label='Фамилия',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ваша фамилия'
+        })
+    )
+    
+    email = forms.EmailField(
+        required=True,
+        label='Email',
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'your@email.com'
+        })
+    )
+    
+    class Meta:
+        model = UserProfile
+        fields = [
+            'first_name', 'last_name', 'email',
+            'district', 'age', 'skill_level',
+            'bio', 'favorite_court', 'position',
+            'city', 'playing_years', 'height',
+            'jump_reach', 'play_style', 'play_days'
+        ]
+        
+        widgets = {
+            'district': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Например: ЦАО, СВАО, Центральный район'
+            }),
+            'age': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 14,
+                'max': 100
+            }),
+            'skill_level': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'bio': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'Расскажите о себе: опыт в волейболе, стиль игры, достижения...'
+            }),
+            'favorite_court': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'position': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'city': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ваш город'
+            }),
+            'playing_years': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 0,
+                'max': 50
+            }),
+            'height': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': 1,
+                'min': 100,
+                'max': 250
+            }),
+            'jump_reach': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': 1,
+                'min': 0,
+                'max': 150
+            }),
+            'play_style': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Например: атакующий, тактический, защитный'
+            }),
+            'play_days': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Например: вечера будних, выходные'
+            }),
+        }
+        
+        labels = {
+            'district': 'Район проживания',
+            'age': 'Возраст',
+            'skill_level': 'Уровень игры',
+            'bio': 'О себе',
+            'favorite_court': 'Любимая площадка',
+            'position': 'Позиция в волейболе',
+            'city': 'Город',
+            'playing_years': 'Лет в волейболе',
+            'height': 'Рост (см)',
+            'jump_reach': 'Высота прыжка (см)',
+            'play_style': 'Стиль игры',
+            'play_days': 'Предпочитаемые дни для игры',
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Заполняем данные пользователя
+        if self.instance and self.instance.user:
+            self.fields['first_name'].initial = self.instance.user.first_name
+            self.fields['last_name'].initial = self.instance.user.last_name
+            self.fields['email'].initial = self.instance.user.email
+        
+        # Ограничиваем список площадок только одобренными
+        self.fields['favorite_court'].queryset = VolleyballCourt.objects.filter(
+            status='approved',
+            is_active=True
+        ).order_by('name')
+    
+    def save(self, commit=True):
+        profile = super().save(commit=False)
+        
+        if profile.user:
+            profile.user.first_name = self.cleaned_data['first_name']
+            profile.user.last_name = self.cleaned_data['last_name']
+            profile.user.email = self.cleaned_data['email']
+            
+            if commit:
+                profile.user.save()
+        
+        if commit:
+            profile.save()
+        
+        return profile
+
+# ============================================================================
+# КАСТОМНЫЕ ПОЛЯ ДЛЯ МНОЖЕСТВЕННОЙ ЗАГРУЗКИ ФАЙЛОВ
+# ============================================================================
+
+class MultipleFileInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+class MultipleFileField(forms.FileField):
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("widget", MultipleFileInput())
+        super().__init__(*args, **kwargs)
+    
+    def clean(self, data, initial=None):
+        single_file_clean = super().clean
+        if isinstance(data, (list, tuple)):
+            result = [single_file_clean(file_data, initial) for file_data in data]
+        else:
+            result = single_file_clean(data, initial)
+        return result
+
+# ============================================================================
+# ФОРМА РЕГИСТРАЦИИ
+# ============================================================================
+
+class CustomUserRegistrationForm(UserCreationForm):
+    """Форма регистрации с фамилией и позицией"""
+    
+    last_name = forms.CharField(
+        max_length=150,
+        required=True,
+        label="Фамилия",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Введите вашу фамилию'
+        })
+    )
+    
+    email = forms.EmailField(
+        required=True,
+        label="Email",
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Введите ваш email'
+        })
+    )
+    
+    position = forms.ChoiceField(
+        choices=UserProfile.POSITION_CHOICES,
+        required=True,
+        label="Ваша позиция в волейболе",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    class Meta:
+        model = User
+        fields = ('username', 'last_name', 'email', 'position', 'password1', 'password2')
+        widgets = {
+            'username': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Введите имя пользователя'
+            }),
+            'password1': forms.PasswordInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Введите пароль'
+            }),
+            'password2': forms.PasswordInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Повторите пароль'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Добавляем классы ко всем полям
+        for field_name in self.fields:
+            if field_name not in ['username', 'last_name', 'email', 'position']:
+                self.fields[field_name].widget.attrs.update({'class': 'form-control'})
+    
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.last_name = self.cleaned_data['last_name']
+        user.email = self.cleaned_data['email']
+        
+        if commit:
+            user.save()
+            # Создаем профиль пользователя
+            UserProfile.objects.create(
+                user=user,
+                position=self.cleaned_data['position']
+            )
+        return user
+
+# ============================================================================
+# ОСТАЛЬНЫЕ ФОРМЫ
+# ============================================================================
+
 class CourtSuggestionForm(forms.ModelForm):
     """Форма для предложения новой площадки"""
     
-    photos = forms.ImageField(
+    photos = MultipleFileField(
         label='Фотографии площадки',
         required=False,
-        widget=forms.ClearableFileInput(attrs={'multiple': True})
+        help_text='Можно выбрать несколько изображений'
     )
     
     accept_rules = forms.BooleanField(
@@ -61,7 +302,7 @@ class CourtSuggestionForm(forms.ModelForm):
             'name', 'city', 'address', 'description',
             'court_type', 'surface', 'courts_count',
             'is_free', 'price_per_hour', 'price_details',
-            'is_lighted', 'has_showers', 'has_locker_rooms', 
+            'is_lighted', 'has_showers', 'has_locker_rooms',
             'has_equipment_rental', 'has_parking', 'has_cafe',
             'opening_time', 'closing_time', 'working_days',
             'phone', 'website', 'email',
@@ -259,7 +500,6 @@ class CourtBookingForm(forms.ModelForm):
         initial=6
     )
     
-    # Дополнительные поля для участников
     participants_emails = forms.CharField(
         required=False,
         widget=forms.Textarea(attrs={
@@ -305,26 +545,21 @@ class CourtBookingForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         
         if self.court:
-            # Установка ограничений для часов
             self.fields['hours'].widget.attrs['min'] = self.court.min_booking_hours
             self.fields['hours'].widget.attrs['max'] = self.court.max_booking_hours
             self.fields['hours'].initial = self.court.min_booking_hours
             
-            # Установка максимальной даты бронирования
             today = date.today()
             max_date = today + timedelta(days=self.court.advance_booking_days)
-            
             self.fields['booking_date'].widget.attrs['min'] = today.isoformat()
             self.fields['booking_date'].widget.attrs['max'] = max_date.isoformat()
             
-            # Установка времени работы
             if self.court.opening_time:
                 self.fields['start_time'].widget.attrs['min'] = self.court.opening_time.strftime('%H:%M')
             if self.court.closing_time:
                 self.fields['start_time'].widget.attrs['max'] = self.court.closing_time.strftime('%H:%M')
         
         if self.user and self.user.is_authenticated:
-            # Заполняем контактные данные из профиля
             profile = getattr(self.user, 'profile', None)
             if profile:
                 self.fields['contact_name'].initial = self.user.get_full_name() or self.user.username
@@ -342,24 +577,17 @@ class CourtBookingForm(forms.ModelForm):
                 f"Максимальный срок бронирования - {self.court.advance_booking_days} дней вперед"
             )
         
-        # Проверка дня недели
-        if booking_date.weekday() >= 5:  # 5=Суббота, 6=Воскресенье
-            # Можно добавить дополнительную логику для выходных
-            pass
-        
         return booking_date
     
     def clean_start_time(self):
         start_time = self.cleaned_data.get('start_time')
         
         if self.court and start_time:
-            # Проверка времени работы
             if start_time < self.court.opening_time:
                 raise ValidationError(
                     f"Площадка открывается в {self.court.opening_time.strftime('%H:%M')}"
                 )
             
-            # Проверка, что время окончания не позже закрытия
             hours = self.cleaned_data.get('hours', 1)
             end_time_dt = datetime.combine(date.today(), start_time) + timedelta(hours=hours)
             end_time = end_time_dt.time()
@@ -393,7 +621,6 @@ class CourtBookingForm(forms.ModelForm):
             email_list = [email.strip() for email in emails.split(',')]
             valid_emails = []
             invalid_emails = []
-            
             email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
             
             for email in email_list:
@@ -413,14 +640,11 @@ class CourtBookingForm(forms.ModelForm):
     
     def clean(self):
         cleaned_data = super().clean()
-        
-        # Проверка доступности времени
         booking_date = cleaned_data.get('booking_date')
         start_time = cleaned_data.get('start_time')
         hours = cleaned_data.get('hours', 1)
         
         if booking_date and start_time and self.court:
-            # Проверяем, не пересекается ли с существующими бронированиями
             start_datetime = datetime.combine(booking_date, start_time)
             end_datetime = start_datetime + timedelta(hours=hours)
             
@@ -442,47 +666,22 @@ class CourtBookingForm(forms.ModelForm):
 
 class QuickBookingForm(forms.Form):
     """Форма быстрого бронирования (для попапов)"""
-    booking_date = forms.DateField(
-        widget=forms.HiddenInput(),
-        required=True
-    )
-    
-    start_time = forms.TimeField(
-        widget=forms.HiddenInput(),
-        required=True
-    )
-    
-    hours = forms.IntegerField(
-        widget=forms.HiddenInput(),
-        initial=1,
-        required=True
-    )
+    booking_date = forms.DateField(widget=forms.HiddenInput(), required=True)
+    start_time = forms.TimeField(widget=forms.HiddenInput(), required=True)
+    hours = forms.IntegerField(widget=forms.HiddenInput(), initial=1, required=True)
 
 class TimeSlotForm(forms.ModelForm):
     """Форма для управления временными слотами"""
     class Meta:
         model = TimeSlot
         fields = ['date', 'start_time', 'end_time', 'is_available', 'is_blocked', 'price']
-        
         widgets = {
-            'date': forms.DateInput(attrs={
-                'type': 'date',
-                'class': 'form-control'
-            }),
-            'start_time': forms.TimeInput(attrs={
-                'type': 'time',
-                'class': 'form-control'
-            }),
-            'end_time': forms.TimeInput(attrs={
-                'type': 'time',
-                'class': 'form-control'
-            }),
+            'date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'start_time': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
+            'end_time': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
             'is_available': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_blocked': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'price': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.01'
-            }),
+            'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
         }
 
 class GameCreationForm(forms.ModelForm):
@@ -509,6 +708,17 @@ class GameCreationForm(forms.ModelForm):
         label="Выберите бронирование"
     )
     
+    # ДОБАВИМ ВЫБОР ПЛОЩАДКИ
+    court = forms.ModelChoiceField(
+        queryset=VolleyballCourt.objects.none(),
+        required=True,
+        widget=forms.Select(attrs={
+            'class': 'form-control',
+            'id': 'court_select'
+        }),
+        label="Выберите площадку *"
+    )
+    
     class Meta:
         model = Game
         fields = [
@@ -517,64 +727,23 @@ class GameCreationForm(forms.ModelForm):
             'min_players', 'max_players', 'skill_level', 'price',
             'is_private', 'contact_name', 'contact_phone'
         ]
-        
         widgets = {
-            'title': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Например: Вечерняя игра для любителей'
-            }),
+            'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Например: Вечерняя игра для любителей'}),
             'meeting_type': forms.Select(attrs={'class': 'form-control'}),
             'sport_type': forms.Select(attrs={'class': 'form-control'}),
-            'description': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 4,
-                'placeholder': 'Опишите детали игры...'
-            }),
-            'game_date': forms.DateInput(attrs={
-                'type': 'date',
-                'class': 'form-control'
-            }),
-            'game_time': forms.TimeInput(attrs={
-                'type': 'time',
-                'class': 'form-control'
-            }),
-            'end_time': forms.TimeInput(attrs={
-                'type': 'time',
-                'class': 'form-control'
-            }),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Опишите детали игры...'}),
+            'game_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'game_time': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
+            'end_time': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
             'court': forms.Select(attrs={'class': 'form-control'}),
-            'location': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Адрес или название площадки'
-            }),
-            'custom_location': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Другое место проведения'
-            }),
-            'max_players': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': 2,
-                'max': 30
-            }),
-            'min_players': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': 2,
-                'max': 30
-            }),
+            'location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Адрес или название площадки'}),
+            'custom_location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Другое место проведения'}),
+            'max_players': forms.NumberInput(attrs={'class': 'form-control', 'min': 2, 'max': 30}),
+            'min_players': forms.NumberInput(attrs={'class': 'form-control', 'min': 2, 'max': 30}),
             'skill_level': forms.Select(attrs={'class': 'form-control'}),
-            'price': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': 50,
-                'min': 0
-            }),
-            'contact_name': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Ваше имя'
-            }),
-            'contact_phone': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': '+7 (XXX) XXX-XX-XX'
-            }),
+            'price': forms.NumberInput(attrs={'class': 'form-control', 'step': 50, 'min': 0}),
+            'contact_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ваше имя'}),
+            'contact_phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+7 (XXX) XXX-XX-XX'}),
             'is_private': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
     
@@ -583,13 +752,11 @@ class GameCreationForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         
         if self.user:
-            # Ограничиваем выбор площадок только доступными
             self.fields['court'].queryset = VolleyballCourt.objects.filter(
-                status='approved',
+                status='approved', 
                 is_active=True
-            )
+            ).order_by('name')
             
-            # Заполняем бронирования пользователя
             self.fields['court_booking'].queryset = CourtBooking.objects.filter(
                 user=self.user,
                 status='confirmed',
@@ -603,16 +770,50 @@ class GameCreationForm(forms.ModelForm):
         end_time = cleaned_data.get('end_time')
         use_court_booking = cleaned_data.get('use_court_booking')
         court_booking = cleaned_data.get('court_booking')
+        court = cleaned_data.get('court')
+        
+        # Если выбрана площадка, проверяем доступность
+        if court and game_date and game_time and end_time:
+            # Проверяем, что площадка одобрена
+            if court.status != 'approved':
+                raise ValidationError("Выбранная площадка еще не одобрена администрацией")
+            
+            # Проверяем время работы площадки
+            if game_time < court.opening_time:
+                raise ValidationError(
+                    f"Площадка открывается в {court.opening_time.strftime('%H:%M')}"
+                )
+            
+            if end_time > court.closing_time:
+                raise ValidationError(
+                    f"Площадка закрывается в {court.closing_time.strftime('%H:%M')}"
+                )
+            
+            # Проверяем, что на это время нет других игр
+            conflicting_games = Game.objects.filter(
+                court=court,
+                game_date=game_date,
+                is_active=True
+            ).exclude(
+                Q(end_time__lte=game_time) | Q(game_time__gte=end_time)
+            )
+            
+            if conflicting_games.exists():
+                raise ValidationError(
+                    "На выбранное время уже запланирована другая игра на этой площадке"
+                )
+        
+        # Автоматически заполняем поле location, если выбрана площадка
+        if court and not cleaned_data.get('location'):
+            cleaned_data['location'] = f"{court.name}, {court.address}"
         
         if use_court_booking and not court_booking:
             raise ValidationError("При выборе опции бронирования необходимо выбрать конкретное бронирование")
         
         if court_booking:
-            # Проверяем, что дата игры совпадает с датой бронирования
             if game_date != court_booking.booking_date:
                 raise ValidationError("Дата игры должна совпадать с датой бронирования площадки")
             
-            # Проверяем, что время игры в рамках бронирования
             booking_end_time = (
                 datetime.combine(court_booking.booking_date, court_booking.start_time) +
                 timedelta(hours=court_booking.hours)
@@ -626,7 +827,6 @@ class GameCreationForm(forms.ModelForm):
                 )
         
         if game_date and game_time and end_time:
-            from datetime import datetime
             game_datetime_start = datetime.combine(game_date, game_time)
             game_datetime_end = datetime.combine(game_date, end_time)
             
@@ -640,11 +840,9 @@ class GameCreationForm(forms.ModelForm):
 
 class GameJoinForm(forms.ModelForm):
     """Форма вступления в игру"""
-    
     class Meta:
         model = GameParticipation
         fields = ['comment']
-        
         widgets = {
             'comment': forms.Textarea(attrs={
                 'class': 'form-control',
@@ -655,64 +853,22 @@ class GameJoinForm(forms.ModelForm):
 
 class ReviewForm(forms.ModelForm):
     """Форма для отзыва о площадке"""
-    
     class Meta:
         model = Review
         fields = [
             'rating_overall', 'rating_condition', 'rating_service', 'rating_price',
             'title', 'comment', 'pros', 'cons'
         ]
-        
         widgets = {
-            'rating_overall': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': 1,
-                'max': 5,
-                'type': 'range',
-                'step': 1
-            }),
-            'rating_condition': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': 1,
-                'max': 5,
-                'type': 'range',
-                'step': 1
-            }),
-            'rating_service': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': 1,
-                'max': 5,
-                'type': 'range',
-                'step': 1
-            }),
-            'rating_price': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': 1,
-                'max': 5,
-                'type': 'range',
-                'step': 1
-            }),
-            'title': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Краткий заголовок отзыва'
-            }),
-            'comment': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 4,
-                'placeholder': 'Подробный отзыв о площадке...'
-            }),
-            'pros': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 2,
-                'placeholder': 'Что понравилось...'
-            }),
-            'cons': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 2,
-                'placeholder': 'Что можно улучшить...'
-            }),
+            'rating_overall': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 5, 'type': 'range', 'step': 1}),
+            'rating_condition': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 5, 'type': 'range', 'step': 1}),
+            'rating_service': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 5, 'type': 'range', 'step': 1}),
+            'rating_price': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 5, 'type': 'range', 'step': 1}),
+            'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Краткий заголовок отзыва'}),
+            'comment': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Подробный отзыв о площадке...'}),
+            'pros': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Что понравилось...'}),
+            'cons': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Что можно улучшить...'}),
         }
-        
         labels = {
             'rating_overall': 'Общая оценка',
             'rating_condition': 'Состояние площадки',
@@ -726,104 +882,21 @@ class ReviewForm(forms.ModelForm):
 
 class SearchForm(forms.Form):
     """Форма поиска"""
-    query = forms.CharField(
-        required=False,
-        label='Поиск',
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Поиск игроков...'
-        })
-    )
-    city = forms.CharField(
-        required=False,
-        label='Город',
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Город'
-        })
-    )
-    position = forms.ChoiceField(
-        required=False,
-        choices=[('', 'Любая позиция')] + UserProfile.POSITION_CHOICES,
-        label='Позиция',
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    skill_level = forms.ChoiceField(
-        required=False,
-        choices=[('', 'Любой уровень')] + UserProfile.SKILL_LEVEL_CHOICES,
-        label='Уровень',
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    min_age = forms.IntegerField(
-        required=False,
-        label='Минимальный возраст',
-        min_value=18,
-        max_value=80,
-        widget=forms.NumberInput(attrs={'class': 'form-control'})
-    )
-    max_age = forms.IntegerField(
-        required=False,
-        label='Максимальный возраст',
-        min_value=18,
-        max_value=80,
-        widget=forms.NumberInput(attrs={'class': 'form-control'})
-    )
+    query = forms.CharField(required=False, label='Поиск', widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Поиск игроков...'}))
+    city = forms.CharField(required=False, label='Город', widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Город'}))
+    position = forms.ChoiceField(required=False, choices=[('', 'Любая позиция')] + UserProfile.POSITION_CHOICES, label='Позиция', widget=forms.Select(attrs={'class': 'form-control'}))
+    skill_level = forms.ChoiceField(required=False, choices=[('', 'Любой уровень')] + UserProfile.SKILL_LEVEL_CHOICES, label='Уровень', widget=forms.Select(attrs={'class': 'form-control'}))
+    min_age = forms.IntegerField(required=False, label='Минимальный возраст', min_value=18, max_value=80, widget=forms.NumberInput(attrs={'class': 'form-control'}))
+    max_age = forms.IntegerField(required=False, label='Максимальный возраст', min_value=18, max_value=80, widget=forms.NumberInput(attrs={'class': 'form-control'}))
 
 class CourtSearchForm(forms.Form):
     """Форма поиска площадок"""
-    city = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Город',
-            'value': 'Москва'
-        }),
-        label='Город',
-        initial='Москва'
-    )
-    
-    court_type = forms.ChoiceField(
-        required=False,
-        choices=[('', 'Любой тип')] + VolleyballCourt.COURT_TYPES,
-        widget=forms.Select(attrs={'class': 'form-control'}),
-        label='Тип площадки'
-    )
-    
-    is_free = forms.BooleanField(
-        required=False,
-        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-        label='Только бесплатные'
-    )
-    
-    has_lighting = forms.BooleanField(
-        required=False,
-        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-        label='С освещением'
-    )
-    
-    min_price = forms.DecimalField(
-        required=False,
-        max_digits=8,
-        decimal_places=2,
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'от',
-            'min': 0
-        }),
-        label='Цена от'
-    )
-    
-    max_price = forms.DecimalField(
-        required=False,
-        max_digits=8,
-        decimal_places=2,
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'до',
-            'min': 0
-        }),
-        label='до'
-    )
+    city = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Город', 'value': 'Москва'}), label='Город', initial='Москва')
+    court_type = forms.ChoiceField(required=False, choices=[('', 'Любой тип')] + VolleyballCourt.COURT_TYPES, widget=forms.Select(attrs={'class': 'form-control'}), label='Тип площадки')
+    is_free = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}), label='Только бесплатные')
+    has_lighting = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}), label='С освещением')
+    min_price = forms.DecimalField(required=False, max_digits=8, decimal_places=2, widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'от', 'min': 0}), label='Цена от')
+    max_price = forms.DecimalField(required=False, max_digits=8, decimal_places=2, widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'до', 'min': 0}), label='до')
 
 class FriendSearchForm(forms.Form):
     """Форма поиска друзей"""
@@ -833,138 +906,44 @@ class FriendSearchForm(forms.Form):
         ('not_friends', 'Еще не друзья'),
     ]
     
-    search_type = forms.ChoiceField(
-        label='Тип поиска',
-        choices=SEARCH_TYPE_CHOICES,
-        initial='all',
-        widget=forms.RadioSelect(attrs={'class': 'search-type-radio'})
-    )
-    
-    query = forms.CharField(
-        label='Поиск',
-        required=False,
-        widget=forms.TextInput(attrs={
-            'placeholder': 'Имя, город, интересы...',
-            'class': 'form-control'
-        })
-    )
-    
-    city = forms.CharField(
-        label='Город',
-        required=False,
-        widget=forms.TextInput(attrs={
-            'placeholder': 'Введите город',
-            'class': 'form-control'
-        })
-    )
-    
-    min_age = forms.IntegerField(
-        label='Возраст от',
-        required=False,
-        min_value=16,
-        max_value=100,
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'placeholder': '18'
-        })
-    )
-    
-    max_age = forms.IntegerField(
-        label='до',
-        required=False,
-        min_value=16,
-        max_value=100,
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'placeholder': '60'
-        })
-    )
-    
-    interests = forms.CharField(
-        label='Интересы',
-        required=False,
-        widget=forms.TextInput(attrs={
-            'placeholder': 'волейбол, спорт, музыка...',
-            'class': 'form-control'
-        })
-    )
+    search_type = forms.ChoiceField(label='Тип поиска', choices=SEARCH_TYPE_CHOICES, initial='all', widget=forms.RadioSelect(attrs={'class': 'search-type-radio'}))
+    query = forms.CharField(label='Поиск', required=False, widget=forms.TextInput(attrs={'placeholder': 'Имя, город, интересы...', 'class': 'form-control'}))
+    city = forms.CharField(label='Город', required=False, widget=forms.TextInput(attrs={'placeholder': 'Введите город', 'class': 'form-control'}))
+    min_age = forms.IntegerField(label='Возраст от', required=False, min_value=16, max_value=100, widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '18'}))
+    max_age = forms.IntegerField(label='до', required=False, min_value=16, max_value=100, widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '60'}))
+    interests = forms.CharField(label='Интересы', required=False, widget=forms.TextInput(attrs={'placeholder': 'волейбол, спорт, музыка...', 'class': 'form-control'}))
 
 class ProfileEditForm(forms.ModelForm):
     """Форма редактирования профиля"""
-    first_name = forms.CharField(
-        label='Имя',
-        max_length=30,
-        required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control'})
-    )
-    
-    last_name = forms.CharField(
-        label='Фамилия',
-        max_length=30,
-        required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control'})
-    )
-    
-    email = forms.EmailField(
-        label='Email',
-        required=True,
-        widget=forms.EmailInput(attrs={'class': 'form-control'})
-    )
+    first_name = forms.CharField(label='Имя', max_length=30, required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    last_name = forms.CharField(label='Фамилия', max_length=30, required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    email = forms.EmailField(label='Email', required=True, widget=forms.EmailInput(attrs={'class': 'form-control'}))
     
     class Meta:
         model = UserProfile
         fields = [
-            'bio', 'city', 'age', 'position', 'positions', 
+            'bio', 'city', 'age', 'position', 'positions',
             'skill_level', 'playing_years', 'height', 'jump_reach',
             'play_style', 'preferred_venue', 'play_days',
             'telegram', 'vk', 'whatsapp',
             'notify_bookings', 'notify_messages', 'notify_news'
         ]
-        
         widgets = {
-            'bio': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 4,
-                'placeholder': 'Расскажите о себе...'
-            }),
-            'city': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Ваш город'
-            }),
+            'bio': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Расскажите о себе...'}),
+            'city': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ваш город'}),
             'age': forms.NumberInput(attrs={'class': 'form-control'}),
             'position': forms.Select(attrs={'class': 'form-control'}),
-            'positions': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Например: связующий, доигровщик'
-            }),
+            'positions': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Например: связующий, доигровщик'}),
             'skill_level': forms.Select(attrs={'class': 'form-control'}),
             'playing_years': forms.NumberInput(attrs={'class': 'form-control'}),
             'height': forms.NumberInput(attrs={'class': 'form-control'}),
             'jump_reach': forms.NumberInput(attrs={'class': 'form-control'}),
-            'play_style': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Например: атакующий, тактический, защитный'
-            }),
-            'preferred_venue': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Предпочитаемая площадка'
-            }),
-            'play_days': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Например: вечера будних, выходные'
-            }),
-            'telegram': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': '@username'
-            }),
-            'vk': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'id или username'
-            }),
-            'whatsapp': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': '+7XXXXXXXXXX'
-            }),
+            'play_style': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Например: атакующий, тактический, защитный'}),
+            'preferred_venue': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Предпочитаемая площадка'}),
+            'play_days': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Например: вечера будних, выходные'}),
+            'telegram': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '@username'}),
+            'vk': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'id или username'}),
+            'whatsapp': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+7XXXXXXXXXX'}),
             'notify_bookings': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'notify_messages': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'notify_news': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
@@ -979,17 +958,14 @@ class ProfileEditForm(forms.ModelForm):
     
     def save(self, commit=True):
         profile = super().save(commit=False)
-        
         if profile.user:
             profile.user.first_name = self.cleaned_data['first_name']
             profile.user.last_name = self.cleaned_data['last_name']
             profile.user.email = self.cleaned_data['email']
             if commit:
                 profile.user.save()
-        
         if commit:
             profile.save()
-        
         return profile
 
 class AvatarUploadForm(forms.ModelForm):
@@ -998,10 +974,7 @@ class AvatarUploadForm(forms.ModelForm):
         model = UserProfile
         fields = ['avatar']
         widgets = {
-            'avatar': forms.FileInput(attrs={
-                'class': 'form-control',
-                'accept': 'image/*'
-            })
+            'avatar': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'})
         }
 
 class BookingFilterForm(forms.Form):
@@ -1014,37 +987,7 @@ class BookingFilterForm(forms.Form):
         ('completed', '🏐 Завершено'),
     ]
     
-    status = forms.ChoiceField(
-        choices=STATUS_CHOICES,
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-control'}),
-        label='Статус'
-    )
-    
-    date_from = forms.DateField(
-        required=False,
-        widget=forms.DateInput(attrs={
-            'type': 'date',
-            'class': 'form-control'
-        }),
-        label='С даты'
-    )
-    
-    date_to = forms.DateField(
-        required=False,
-        widget=forms.DateInput(attrs={
-            'type': 'date',
-            'class': 'form-control'
-        }),
-        label='По дату'
-    )
-    
-    court = forms.ModelChoiceField(
-        queryset=VolleyballCourt.objects.filter(is_active=True),
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-control'}),
-        label='Площадка'
-    )
-
-# Импорт для Q
-from django.db.models import Q
+    status = forms.ChoiceField(choices=STATUS_CHOICES, required=False, widget=forms.Select(attrs={'class': 'form-control'}), label='Статус')
+    date_from = forms.DateField(required=False, widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}), label='С даты')
+    date_to = forms.DateField(required=False, widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}), label='По дату')
+    court = forms.ModelChoiceField(queryset=VolleyballCourt.objects.filter(is_active=True), required=False, widget=forms.Select(attrs={'class': 'form-control'}), label='Площадка')

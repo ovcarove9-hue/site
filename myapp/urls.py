@@ -6,12 +6,14 @@ urlpatterns = [
     # ============================================================================
     # ОСНОВНЫЕ СТРАНИЦЫ
     # ============================================================================
-    path('', views.home, name='base'),
+    path('', views.home, name='home'),  # ← ИСПРАВЛЕНО: было 'base'
     path('map/', views.map_view, name='map'),
     path('dashboard/', views.dashboard, name='dashboard'),
-    path('court/', views.court_page, name='court_page'),  # Для /court/?id=1
-    path('court/<int:court_id>/', views.court_page, name='court_detail'),
-    
+    path('court/', views.court_page, name='court_page'),
+    path('court/<int:court_id>/', views.court_detail, name='court_detail'),
+    path('suggest_court/', views.suggest_court, name='suggest_court'),  # ← УДАЛЕН ДУБЛЬ
+    path('friends/', views.friends_list, name='friends'),
+    path('avatar/upload/', views.upload_player_avatar, name='upload_player_avatar'),
     # ============================================================================
     # СИСТЕМА БРОНИРОВАНИЯ ПЛОЩАДОК
     # ============================================================================
@@ -24,9 +26,6 @@ urlpatterns = [
     # ============================================================================
     # ПЛОЩАДКИ И МОДЕРАЦИЯ
     # ============================================================================
-    path('court/<int:court_id>/', views.court_detail, name='court_detail'),
-    path('court/<int:court_id>/review/', views.add_review, name='add_review'),
-    
     path('suggest-court/', views.suggest_court, name='suggest_court'),
     path('my-suggestions/', views.my_suggestions, name='my_suggestions'),
     
@@ -44,11 +43,11 @@ urlpatterns = [
     # ============================================================================
     # СИСТЕМА ИГР
     # ============================================================================
-    path('create_game/', views.create_game, name='create_game'),  # ИЗМЕНИЛИ ЗДЕСЬ
+    path('create_game/', views.create_game, name='create_game'),
     path('game/<int:game_id>/', views.game_detail, name='game_detail'),
     path('game/<int:game_id>/join/', views.join_game, name='join_game'),
     path('my-games/', views.my_games, name='my_games'),
-    
+    path('api/games-by-date/', views.games_by_date_api, name='games_by_date_api'),
     # ============================================================================
     # ПОИСК И ПРОФИЛИ
     # ============================================================================
@@ -56,7 +55,12 @@ urlpatterns = [
     path('profile/<int:user_id>/', views.profile, name='profile'),
     path('edit-profile/', views.edit_profile, name='edit_profile'),
     path('upload-avatar/', views.upload_avatar, name='upload_avatar'),
-    
+    path('friends/<int:user_id>/', views.friends_list, name='friends_list'),
+    path('friends/', views.friends_list, name='my_friends'),  # без ID для текущего пользователя
+    path('add-friend/<int:user_id>/', views.add_friend, name='add_friend'),
+    path('accept-friend/<int:friendship_id>/', views.accept_friend, name='accept_friend'),
+    path('reject-friend/<int:friendship_id>/', views.reject_friend, name='reject_friend'),
+    path('remove-friend/<int:user_id>/', views.remove_friend, name='remove_friend'),
     # ============================================================================
     # СИСТЕМА ДРУЗЕЙ
     # ============================================================================
