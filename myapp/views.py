@@ -9,6 +9,8 @@ from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.views.decorators.http import require_POST, require_GET
 from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 import json
 from datetime import datetime, timedelta, date
 import calendar
@@ -185,16 +187,89 @@ def home(request):
             status__in=['pending', 'confirmed']
         ).order_by('booking_date', 'start_time')[:3]
     
+    # Календарь игр
+    year = int(request.GET.get('year', timezone.now().year))
+    month = int(request.GET.get('month', timezone.now().month))
+
+    # Получаем игры для календаря
+    calendar_games = Game.objects.filter(
+        game_date__year=year,
+        game_date__month=month,
+        is_active=True
+    ).select_related('organizer')
+
+    # Формируем календарь
+    cal = calendar.Calendar(firstweekday=0)  # Понедельник первый
+    month_days = cal.monthdayscalendar(year, month)
+
+    # Добавляем игры к каждому дню
+    calendar_days = []
+    today = timezone.now().date()
+
+    for week in month_days:
+        week_data = []
+        for day in week:
+            if day == 0:  # День вне месяца
+                week_data.append({
+                    'day': 0,
+                    'is_current_month': False,
+                    'is_today': False,
+                    'has_games': False,
+                    'games': [],
+                    'date': None
+                })
+            else:
+                # Находим игры для этого дня
+                day_date = date(year, month, day)
+                day_games = [game for game in calendar_games if game.game_date == day_date]
+
+                week_data.append({
+                    'day': day,
+                    'is_current_month': True,
+                    'is_today': day_date == today,
+                    'has_games': len(day_games) > 0,
+                    'games': day_games,
+                    'date': day_date
+                })
+        calendar_days.append(week_data)
+
+    # Информация о месяце для навигации
+    prev_month = month - 1 if month > 1 else 12
+    prev_year = year if month > 1 else year - 1
+    next_month = month + 1 if month < 12 else 1
+    next_year = year if month < 12 else year + 1
+
+    # Данные для навигации по месяцам
+    current_month_obj = date(year, month, 1)
+    prev_month_obj = date(prev_year, prev_month, 1)
+    next_month_obj = date(next_year, next_month, 1)
+
+    # Получаем игры пользователя, если авторизован
+    user_games = []
+    if request.user.is_authenticated:
+        user_games = Game.objects.filter(
+            participants=request.user,
+            game_date__gte=today,
+            is_active=True
+        ).order_by('game_date', 'game_time')[:10]
+
     context = {
         'page_title': 'Волейбольное сообщество - Главная',
         'total_courts': total_courts,
         'total_games': total_games,
         'total_users': total_users,
-        'upcoming_games': upcoming_games,
+        'upcoming_games': upcoming_games.count(),  # передаем количество, а не объект QuerySet
         'recent_courts': recent_courts,
         'upcoming_bookings': upcoming_bookings,
+        'calendar_days': calendar_days,
+        'month_name': calendar.month_name[month],
+        'current_year': year,
+        'prev_month': prev_month_obj,
+        'next_month': next_month_obj,
+        'today': today,
+        'user_games': user_games,
     }
-    
+
     return render(request, 'myapp/home.html', context)
 
 @login_required
@@ -946,82 +1021,89 @@ def courts_api(request):
 @login_required
 def create_game(request):
     """Создание новой игры с привязкой к площадке"""
-    
+
     if request.method == 'POST':
         form = GameCreationForm(request.POST, user=request.user)
-        
+
         if form.is_valid():
             try:
                 game = form.save(commit=False)
                 game.organizer = request.user
                 game.is_active = True
-                
+
                 # Если выбрана площадка, заполняем автоматически location
                 court = form.cleaned_data.get('court')
                 if court:
                     game.court = court
                     game.location = f"{court.name}, {court.address}"
-                    
+
                     # Проверяем, что площадка одобрена
                     if court.status != 'approved':
                         messages.error(request, 'Выбранная площадка еще не одобрена')
                         return redirect('create_game')
-                    
+
                     # Проверяем доступность времени на площадке
                     game_date = form.cleaned_data.get('game_date')
                     game_time = form.cleaned_data.get('game_time')
                     end_time = form.cleaned_data.get('end_time')
-                    
+
                     # Проверяем время работы
                     if game_time < court.opening_time:
                         messages.error(request, f'Площадка открывается в {court.opening_time.strftime("%H:%M")}')
                         return redirect('create_game')
-                    
+
                     if end_time and end_time > court.closing_time:
                         messages.error(request, f'Площадка закрывается в {court.closing_time.strftime("%H:%M")}')
                         return redirect('create_game')
-                
+
                 game.save()
-                
+
                 # Автоматически добавляем организатора как участника
                 GameParticipation.objects.create(
                     user=request.user,
                     game=game,
                     status='confirmed'
                 )
-                
-                messages.success(request, f'✅ Игра "{game.title}" создана!')
-                
+
+                messages.success(request, f'✅ Игра "{game.title}" создана успешно!')
+
                 # Если игра привязана к площадке, показываем ссылку на нее
                 if game.court:
                     messages.info(request, f'🏐 Игра привязана к площадке: <a href="/court/{game.court.id}/">{game.court.name}</a>')
-                
+
                 return redirect('game_detail', game_id=game.id)
-                
+
+            except IntegrityError as e:
+                messages.error(request, f'Ошибка целостности данных: {str(e)}')
+            except ValidationError as e:
+                messages.error(request, f'Ошибка валидации: {str(e)}')
             except Exception as e:
                 messages.error(request, f'Ошибка при создании игры: {str(e)}')
         else:
-            messages.error(request, 'Пожалуйста, исправьте ошибки в форме')
+            # Выводим конкретные ошибки формы
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'Ошибка в поле "{field}": {error}')
     else:
         form = GameCreationForm(user=request.user)
-    
+
     # Доступные площадки (только одобренные)
     courts = VolleyballCourt.objects.filter(status='approved', is_active=True)
-    
+
     # Бронирования пользователя
     user_bookings = CourtBooking.objects.filter(
         user=request.user,
         booking_date__gte=timezone.now().date(),
         status='confirmed'
     ).order_by('booking_date', 'start_time')
-    
+
     context = {
         'page_title': 'Создание игры',
         'form': form,
         'courts': courts,
         'user_bookings': user_bookings,
     }
-    
+
     return render(request, 'myapp/create_game.html', context)
 
 @login_required
@@ -1549,30 +1631,28 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 
 def register(request):
     """Регистрация нового пользователя"""
-    
+
     if request.user.is_authenticated:
         return redirect('home')
-    
+
     if request.method == 'POST':
-        form = UserCreationForm(request.POST)
-        
+        form = CustomUserRegistrationForm(request.POST)
+
         if form.is_valid():
             user = form.save()
-            
-            # Создаём профиль
-            
+
             # Автоматически логиним пользователя
             login(request, user)
             messages.success(request, f'✅ Добро пожаловать, {user.username}!')
             return redirect('edit_profile')
     else:
-        form = UserCreationForm()
-    
+        form = CustomUserRegistrationForm()
+
     context = {
         'page_title': 'Регистрация',
         'form': form,
     }
-    
+
     return render(request, 'myapp/register.html', context)
 
 def login_view(request):

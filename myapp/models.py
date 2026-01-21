@@ -12,12 +12,18 @@ from django.contrib.auth.models import User
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
-        UserProfile.objects.create(user=instance)
+        # Проверяем, существует ли уже профиль для пользователя
+        if not UserProfile.objects.filter(user=instance).exists():
+            UserProfile.objects.create(user=instance)
 
 @receiver(post_save, sender=User)
 def save_user_profile(sender, instance, **kwargs):
     try:
-        instance.profile.save()
+        if hasattr(instance, 'profile'):
+            instance.profile.save()
+        else:
+            # Создаем профиль, если его нет
+            UserProfile.objects.create(user=instance)
     except UserProfile.DoesNotExist:
         UserProfile.objects.create(user=instance)
 
@@ -302,7 +308,7 @@ class Game(models.Model):
     
     # Тип встречи
     meeting_type = models.CharField(
-        max_length=50, 
+        max_length=50,
         choices=MEETING_TYPES,
         default='friendly',
         verbose_name="Тип встречи"

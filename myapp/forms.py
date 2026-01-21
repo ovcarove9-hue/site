@@ -245,14 +245,18 @@ class CustomUserRegistrationForm(UserCreationForm):
         user = super().save(commit=False)
         user.last_name = self.cleaned_data['last_name']
         user.email = self.cleaned_data['email']
-        
+
         if commit:
             user.save()
-            # Создаем профиль пользователя
-            UserProfile.objects.create(
+            # Создаем профиль пользователя только если он не существует
+            profile, created = UserProfile.objects.get_or_create(
                 user=user,
-                position=self.cleaned_data['position']
+                defaults={'position': self.cleaned_data['position']}
             )
+            if not created and hasattr(profile, 'position'):
+                # Обновляем позицию, если профиль уже существовал
+                profile.position = self.cleaned_data['position']
+                profile.save()
         return user
 
 # ============================================================================
@@ -722,9 +726,9 @@ class GameCreationForm(forms.ModelForm):
     class Meta:
         model = Game
         fields = [
-            'title', 'meeting_type', 'sport_type', 'game_date', 'game_time',
+            'title', 'sport_type', 'game_date', 'game_time',
             'end_time', 'location', 'custom_location', 'court', 'description',
-            'min_players', 'max_players', 'skill_level', 'price',
+            'max_players', 'skill_level', 'price',
             'is_private', 'contact_name', 'contact_phone'
         ]
         widgets = {

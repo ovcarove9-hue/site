@@ -566,29 +566,128 @@
     </style>
 </head>
 <body>
+
+    <!-- Всплывающий баннер -->
+    <div class="scroll-hide-banner hidden" id="scrollBanner">
+      <button class="close-btn" onclick="closeBanner()">×</button>
+      <h3>Волейбольный клуб "Волейбол-центр"</h3>
+      <p>Присоединяйтесь к нашему сообществу волейболистов! 📍 Москва, ул. Спортивная, 15 📞 +7 (495) 123-45-67</p>
+
+      <!-- Навигация -->
+      <div class="nav" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 15px;">
+          <a href="{% url 'map' %}" class="cta-button" style="padding: 8px 16px; font-size: 14px; margin: 3px;">Карта площадок</a>
+          <a href="{% url 'create_game' %}" class="cta-button" style="padding: 8px 16px; font-size: 14px; margin: 3px;">Создать игру</a>
+          <a href="{% url 'search' %}" class="cta-button" style="padding: 8px 16px; font-size: 14px; margin: 3px;">Поиск игроков</a>
+
+          {% if user.is_authenticated %}
+              {% if user.id %}
+                  <a href="{% url 'profile' user.id %}" class="cta-button" style="padding: 8px 16px; font-size: 14px; margin: 3px;">Мой профиль</a>
+              {% endif %}
+              <a href="{% url 'logout' %}" class="cta-button" style="padding: 8px 16px; font-size: 14px; margin: 3px;">Выйти</a>
+          {% else %}
+              <a href="{% url 'login' %}" class="cta-button" style="padding: 8px 16px; font-size: 14px; margin: 3px;">Войти</a>
+          {% endif %}
+      </div>
+    </div>
+
+    <!-- Стили для анимации -->
+    <style>
+        .club-banner {
+            margin-bottom: 20px;
+        }
+
+        /* Стили для скрывающегося банера */
+        .scroll-hide-banner {
+          position: fixed;
+          top: -120px;
+          left: 0;
+          right: 0;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          padding: 25px 30px;
+          z-index: 9999;
+          box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+          transition: top 0.3s ease;
+          opacity: 1;
+          transform: none;
+        }
+
+        /* Состояние при скролле - скрыт */
+        .scroll-hide-banner.hidden {
+          top: -120px;
+          opacity: 0;
+          pointer-events: none;
+        }
+
+        /* Показываем баннер при наведении */
+        .scroll-hide-banner.hidden:hover {
+          top: 0;
+          opacity: 1;
+          pointer-events: auto;
+        }
+
+        /* Дополнительные стили для красоты */
+        .scroll-hide-banner h3 {
+          margin: 0 0 10px 0;
+          font-size: 22px;
+          font-weight: 600;
+        }
+
+        .scroll-hide-banner p {
+          margin: 0 0 15px 0;
+          font-size: 16px;
+          line-height: 1.5;
+        }
+
+        .scroll-hide-banner .close-btn {
+          position: absolute;
+          top: 15px;
+          right: 15px;
+          background: rgba(255, 255, 255, 0.2);
+          border: none;
+          color: white;
+          width: 30px;
+          height: 30px;
+          border-radius: 50%;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 16px;
+          transition: background 0.3s;
+        }
+
+        .scroll-hide-banner .close-btn:hover {
+          background: rgba(255, 255, 255, 0.3);
+        }
+
+        .scroll-hide-banner .cta-button {
+          display: inline-block;
+          background: white;
+          color: #667eea;
+          padding: 8px 20px;
+          border-radius: 25px;
+          text-decoration: none;
+          font-weight: 600;
+          font-size: 14px;
+          transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .scroll-hide-banner .cta-button:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        body {
+            padding-top: 20px; /* Уменьшенный отступ сверху */
+        }
+    </style>
+
     <div class="container">
         <!-- Шапка -->
         <div class="header">
             <h1><i class="fas fa-volleyball-ball"></i> Волейбольный клуб</h1>
             <p>Сообщество волейболистов: игры, тренировки, турниры. Найди партнёров для игры!</p>
-            
-            <!-- Навигация -->
-            <div class="nav">
-                <a href="/"><i class="fas fa-home"></i> Главная</a>
-                <a href="{% url 'map' %}"><i class="fas fa-map-marked-alt"></i> Карта площадок</a>
-                <a href="{% url 'create_game' %}"><i class="fas fa-plus-circle"></i> Создать игру</a>
-                <a href="{% url 'search' %}"><i class="fas fa-search"></i> Поиск игроков</a>
-                
-                {% if user.is_authenticated %}
-                    {% if user.id %}
-                        <a href="{% url 'profile' user.id %}"><i class="fas fa-user"></i> Мой профиль</a>
-                    {% endif %}
-                    <a href="{% url 'logout' %}"><i class="fas fa-sign-out-alt"></i> Выйти</a>
-                {% else %}
-                    <a href="{% url 'login' %}"><i class="fas fa-sign-in-alt"></i> Войти</a>
-                    <a href="{% url 'register' %}"><i class="fas fa-user-plus"></i> Регистрация</a>
-                {% endif %}
-            </div>
         </div>
         
         <!-- Сообщения -->
@@ -608,9 +707,6 @@
             <p style="font-size: 1.2rem; opacity: 0.9;">Место, где волейболисты находят партнёров, игры и новые знакомства</p>
             {% if not user.is_authenticated %}
             <div style="margin-top: 20px;">
-                <a href="{% url 'register' %}" style="background: white; color: #667eea; padding: 12px 30px; border-radius: 50px; text-decoration: none; font-weight: 600; display: inline-block; margin: 0 10px;">
-                    Присоединиться
-                </a>
                 <a href="{% url 'search' %}" style="background: transparent; border: 2px solid white; color: white; padding: 12px 30px; border-radius: 50px; text-decoration: none; font-weight: 600; display: inline-block; margin: 0 10px;">
                     Найти игроков
                 </a>
@@ -643,8 +739,8 @@
                         </div>
                         <div class="stat-card">
                             <i class="fas fa-trophy"></i>
-                            <h3>{{ upcoming_games|length }}</h3>
-                            <p>Ближайших игр</p>
+                            <h3>{{ total_games }}</h3>
+                            <p>Всего игр</p>
                         </div>
                     </div>
                 </div>
@@ -704,41 +800,6 @@
                     </div>
                 </div>
                 
-                <!-- Ближайшие игры -->
-                <div class="content-box">
-                    <h3><i class="fas fa-volleyball-ball"></i> Ближайшие игры</h3>
-                    <div class="games-list">
-                        {% if upcoming_games %}
-                            {% for game in upcoming_games %}
-                                <div class="game-item">
-                                    <h4>{{ game.title }}</h4>
-                                    <p>{{ game.description|truncatechars:100|default:"Описание отсутствует" }}</p>
-                                    <div class="game-meta">
-                                        <span><i class="far fa-calendar"></i> {{ game.game_date }} {{ game.game_time }}</span>
-                                        <span><i class="fas fa-map-marker-alt"></i> {{ game.location|truncatechars:20 }}</span>
-                                        <span><i class="fas fa-user-friends"></i> {{ game.participants.count }}/{{ game.max_players }} игроков</span>
-                                    </div>
-                                    {% if user.is_authenticated %}
-                                        {% if game.organizer != user and user not in game.participants.all %}
-                                            <a href="{% url 'join_game' game.id %}" class="btn-join">Присоединиться</a>
-                                        {% elif user in game.participants.all %}
-                                            <button class="btn-join" style="background: #718096;" disabled>Вы уже участвуете</button>
-                                        {% endif %}
-                                    {% else %}
-                                        <a href="{% url 'login' %}?next={{ request.path }}" class="btn-join">Войдите для участия</a>
-                                    {% endif %}
-                                </div>
-                            {% endfor %}
-                        {% else %}
-                            <div class="no-games">
-                                <p><i class="fas fa-calendar-times"></i> Нет запланированных игр</p>
-                                {% if user.is_authenticated %}
-                                    <a href="{% url 'create_game' %}" class="btn-join" style="margin-top: 10px;">Создать первую игру</a>
-                                {% endif %}
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
             </div>
             
             <!-- Боковая панель -->
@@ -993,6 +1054,60 @@
         // Инициализация при загрузке
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Волейбольный клуб загружен');
+        });
+
+        let lastScrollTop = 0;
+        let bannerHidden = false;
+        const banner = document.getElementById('scrollBanner');
+
+        window.addEventListener('scroll', function() {
+          const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
+          // Прячем баннер при скролле вниз
+          if (scrollTop > lastScrollTop && scrollTop > 50) {
+            if (!bannerHidden && !banner.classList.contains('hidden')) {
+              banner.classList.add('hidden');
+              bannerHidden = true;
+            }
+          }
+          // Показываем при скролле вверх
+          else if (scrollTop < lastScrollTop - 10) {
+            if (bannerHidden) {
+              banner.classList.remove('hidden');
+              bannerHidden = false;
+            }
+          }
+
+          lastScrollTop = scrollTop;
+        });
+
+        // Функция для закрытия банера
+        function closeBanner() {
+          banner.style.display = 'none';
+        }
+
+        // Показываем баннер через 2 секунды после загрузки
+        setTimeout(() => {
+          banner.classList.remove('hidden');
+          bannerHidden = false;
+        }, 2000);
+
+        // Обновляем отступ тела документа при показе/скрытии баннера
+        const observer = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+              if (banner.classList.contains('hidden')) {
+                document.body.style.paddingTop = '20px';
+              } else {
+                document.body.style.paddingTop = '120px';
+              }
+            }
+          });
+        });
+
+        observer.observe(banner, {
+          attributes: true,
+          attributeFilter: ['class']
         });
     </script>
 </body>

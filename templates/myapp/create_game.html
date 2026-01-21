@@ -369,13 +369,13 @@
                     <a href="{% url 'home' %}" class="btn btn-outline-secondary">
                         <i class="fas fa-arrow-left me-2"></i> Назад
                     </a>
-                    
+
                     <div>
                         <button type="reset" class="btn btn-outline-danger me-2">
                             <i class="fas fa-redo me-2"></i> Очистить
                         </button>
-                        
-                        <button type="submit" class="btn btn-success px-4">
+
+                        <button type="submit" class="btn btn-success px-4" id="submit-btn">
                             <i class="fas fa-plus-circle me-2"></i> Создать игру
                         </button>
                     </div>
@@ -409,7 +409,7 @@
                     dateInput.value = today;
                 }
             }
-            
+
             // Устанавливаем время (ближайший час)
             const timeInput = document.getElementById('id_game_time');
             if (timeInput && !timeInput.value) {
@@ -417,30 +417,41 @@
                 const nextHour = new Date(now.getTime() + 60 * 60 * 1000);
                 timeInput.value = nextHour.toTimeString().slice(0, 5);
             }
+
+            // Автоматическое заполнение контактной информации
+            const contactName = document.getElementById('id_contact_name');
+            const contactPhone = document.getElementById('id_contact_phone');
+
+            // Заполняем контактную информацию из данных пользователя, если поля пустые
+            if (contactName && !contactName.value && contactName.placeholder.includes('Ваше имя')) {
+                // Здесь можно использовать данные из профиля пользователя, если они доступны
+            }
         });
-        
+
         // Функция выбора площадки
         function selectCourt(courtId, courtName, courtAddress) {
             // Устанавливаем значение в выпадающем списке
             const select = document.getElementById('id_court');
-            select.value = courtId;
-            
+            if(select) {
+                select.value = courtId;
+            }
+
             // Заполняем поле локации
             const locationInput = document.getElementById('id_location');
             if (locationInput) {
                 locationInput.value = courtName + ', ' + courtAddress;
             }
-            
+
             // Сбрасываем выделение всех карточек
             document.querySelectorAll('.court-card').forEach(card => {
                 card.classList.remove('selected');
             });
-            
+
             // Показываем галочку на выбранной карточке
             document.querySelectorAll('.court-card i').forEach(icon => {
                 icon.style.display = 'none';
             });
-            
+
             // Выделяем выбранную карточку
             const selectedCard = document.getElementById('court-card-' + courtId);
             if (selectedCard) {
@@ -451,15 +462,21 @@
                 }
             }
         }
-        
-        // Автоматическое заполнение контактной информации
-        document.addEventListener('DOMContentLoaded', function() {
-            const contactName = document.getElementById('id_contact_name');
-            const contactPhone = document.getElementById('id_contact_phone');
-            
-            if (contactName && !contactName.value) {
-                // Можно попробовать получить имя пользователя
-                // Это нужно будет настроить в зависимости от вашей логики
+
+        // Добавляем обработчик отправки формы для лучшей обработки ошибок
+        document.querySelector('form[method="post"]').addEventListener('submit', function(e) {
+            const submitBtn = document.getElementById('submit-btn');
+            if(submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Создание...';
+
+                // Восстановление кнопки при ошибке
+                setTimeout(() => {
+                    if(submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i class="fas fa-plus-circle me-2"></i> Создать игру';
+                    }
+                }, 5000);
             }
         });
     </script>
