@@ -7,14 +7,11 @@ import uuid
 
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.contrib.auth.models import User
 
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
-        # Проверяем, существует ли уже профиль для пользователя
-        if not UserProfile.objects.filter(user=instance).exists():
-            UserProfile.objects.create(user=instance)
+        UserProfile.objects.get_or_create(user=instance)
 
 @receiver(post_save, sender=User)
 def save_user_profile(sender, instance, **kwargs):
@@ -23,9 +20,9 @@ def save_user_profile(sender, instance, **kwargs):
             instance.profile.save()
         else:
             # Создаем профиль, если его нет
-            UserProfile.objects.create(user=instance)
+            UserProfile.objects.get_or_create(user=instance)
     except UserProfile.DoesNotExist:
-        UserProfile.objects.create(user=instance)
+        UserProfile.objects.get_or_create(user=instance)
 
 class Court(models.Model):
     name = models.CharField(max_length=200)
@@ -1037,16 +1034,4 @@ class Review(models.Model):
         """Средняя оценка"""
         return (self.rating_overall + self.rating_condition + self.rating_service + self.rating_price) / 4
 
-# Сигналы для автоматического создания профиля
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-
-@receiver(post_save, sender=User)
-def create_user_profile(sender, instance, created, **kwargs):
-    if created:
-        UserProfile.objects.create(user=instance)
-
-@receiver(post_save, sender=User)
-def save_user_profile(sender, instance, **kwargs):
-    if hasattr(instance, 'profile'):
-        instance.profile.save()
+# Сигналы для автоматического создания профиля подключены вверху файла.
