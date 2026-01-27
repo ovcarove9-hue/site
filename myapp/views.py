@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponseForbidden, HttpResponseBadRequest
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Avg
 from django.utils import timezone
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
@@ -12,6 +12,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 import json
+import decimal
 from datetime import datetime, timedelta, date
 import calendar
 from datetime import datetime, timedelta, date
@@ -45,10 +46,11 @@ def games_by_date_api(request):
         return JsonResponse({'error': 'Неверный формат даты'}, status=400)
     
     # Получаем игры на указанную дату
-    games = Game.objects.filter(
+    games_queryset = Game.objects.filter(
         game_date=query_date,
         is_active=True
-    ).select_related('organizer').order_by('game_time')
+    ).select_related('organizer').prefetch_related('participants').order_by('game_time')
+    games = list(games_queryset)
     
     games_data = []
     for game in games:
@@ -162,22 +164,70 @@ def court_page(request):
 
 def home(request):
     """Главная страница"""
+    # Статистика сообщества
     total_courts = VolleyballCourt.objects.filter(status='approved', is_active=True).count()
     total_games = Game.objects.filter(is_active=True).count()
     total_users = User.objects.filter(is_active=True).count()
-    
-    # Ближайшие игры (используем timezone.now() для корректной работы с часовыми поясами)
+
+    # Дополнительная статистика
+    today_games = Game.objects.filter(
+        game_date=timezone.now().date(),
+        is_active=True
+    ).count()
     upcoming_games = Game.objects.filter(
+        game_date__gt=timezone.now().date(),
+        is_active=True
+    ).count()
+    indoor_courts = VolleyballCourt.objects.filter(
+        status='approved',
+        is_active=True,
+        court_type='indoor'
+    ).count()
+    outdoor_courts = VolleyballCourt.objects.filter(
+        status='approved',
+        is_active=True,
+        court_type='outdoor'
+    ).count()
+    beach_courts = VolleyballCourt.objects.filter(
+        status='approved',
+        is_active=True,
+        court_type='beach'
+    ).count()
+
+    # Ближайшие игры (используем timezone.now() для корректной работы с часовыми поясами)
+    upcoming_games_queryset = Game.objects.filter(
         game_date__gte=timezone.now().date(),
         is_active=True
-    ).select_related('organizer').order_by('game_date', 'game_time')[:5]
-    
+    ).select_related('organizer').prefetch_related('participants').order_by('game_date', 'game_time')[:5]
+
+    # Получаем общее количество предстоящих игр (не только ближайших 5)
+    upcoming_games_count = Game.objects.filter(
+        game_date__gt=timezone.now().date(),
+        is_active=True
+    ).count()
+
+    # Преобразуем в список, чтобы можно было итерировать дважды
+    upcoming_games = list(upcoming_games_queryset)
+
+    # Добавляем информацию о возможности присоединиться для каждого гейма
+    if request.user.is_authenticated:
+        for game in upcoming_games:
+            game.can_join = (
+                game.organizer != request.user and
+                request.user not in game.participants.all() and
+                game.participants.count() < game.max_players
+            )
+    else:
+        # Для анонимных пользователей нельзя присоединиться
+        for game in upcoming_games:
+            game.can_join = False
+
     # Последние одобренные площадки
     recent_courts = VolleyballCourt.objects.filter(
         status='approved',
         is_active=True
     ).order_by('-created_at')[:6]
-    
+
     # Предстоящие бронирования (если пользователь авторизован)
     upcoming_bookings = None
     if request.user.is_authenticated:
@@ -186,96 +236,239 @@ def home(request):
             booking_date__gte=timezone.now().date(),
             status__in=['pending', 'confirmed']
         ).order_by('booking_date', 'start_time')[:3]
-    
-    # Календарь игр
-    year = int(request.GET.get('year', timezone.now().year))
-    month = int(request.GET.get('month', timezone.now().month))
 
-    # Получаем игры для календаря
-    calendar_games = Game.objects.filter(
-        game_date__year=year,
-        game_date__month=month,
-        is_active=True
-    ).select_related('organizer')
-
-    # Формируем календарь
-    cal = calendar.Calendar(firstweekday=0)  # Понедельник первый
-    month_days = cal.monthdayscalendar(year, month)
-
-    # Добавляем игры к каждому дню
-    calendar_days = []
-    today = timezone.now().date()
-
-    for week in month_days:
-        week_data = []
-        for day in week:
-            if day == 0:  # День вне месяца
-                week_data.append({
-                    'day': 0,
-                    'is_current_month': False,
-                    'is_today': False,
-                    'has_games': False,
-                    'games': [],
-                    'date': None
-                })
-            else:
-                # Находим игры для этого дня
-                day_date = date(year, month, day)
-                day_games = [game for game in calendar_games if game.game_date == day_date]
-
-                week_data.append({
-                    'day': day,
-                    'is_current_month': True,
-                    'is_today': day_date == today,
-                    'has_games': len(day_games) > 0,
-                    'games': day_games,
-                    'date': day_date
-                })
-        calendar_days.append(week_data)
-
-    # Информация о месяце для навигации
-    prev_month = month - 1 if month > 1 else 12
-    prev_year = year if month > 1 else year - 1
-    next_month = month + 1 if month < 12 else 1
-    next_year = year if month < 12 else year + 1
-
-    # Данные для навигации по месяцам
-    current_month_obj = date(year, month, 1)
-    prev_month_obj = date(prev_year, prev_month, 1)
-    next_month_obj = date(next_year, next_month, 1)
 
     # Получаем игры пользователя, если авторизован
+    today = timezone.now().date()
     user_games = []
     if request.user.is_authenticated:
-        user_games = Game.objects.filter(
+        user_games_queryset = Game.objects.filter(
             participants=request.user,
             game_date__gte=today,
             is_active=True
-        ).order_by('game_date', 'game_time')[:10]
+        ).select_related('organizer').prefetch_related('participants').order_by('game_date', 'game_time')[:10]
+        user_games = list(user_games_queryset)
+
+    # Подготовка данных для календаря на главной странице
+    current_date = timezone.now().date()
+    current_month = current_date.month
+    current_year = current_date.year
+
+    # Получаем все игры для текущего месяца
+    games_for_month_queryset = Game.objects.filter(
+        game_date__year=current_year,
+        game_date__month=current_month,
+        is_active=True
+    ).select_related('organizer').prefetch_related('participants').order_by('game_date', 'game_time')
+    games_for_month = list(games_for_month_queryset)
+
+    # Создаем календарь для текущего месяца
+    import calendar
+    cal = calendar.Calendar(firstweekday=0)  # Понедельник - первый день недели
+    month_days = cal.monthdayscalendar(current_year, current_month)
+
+    # Группируем игры по датам
+    games_by_date = {}
+    for game in games_for_month:
+        date_str = game.game_date.strftime('%Y-%m-%d')
+        if date_str not in games_by_date:
+            games_by_date[date_str] = []
+        games_by_date[date_str].append(game)
+
+    # Формируем данные для календаря
+    calendar_data = []
+    for week in month_days:
+        week_data = []
+        for day in week:
+            if day == 0:  # День вне текущего месяца
+                week_data.append({'day': 0, 'games': []})
+            else:
+                date_str = f"{current_year}-{current_month:02d}-{day:02d}"
+                games = games_by_date.get(date_str, [])
+                week_data.append({'day': day, 'games': games})
+        calendar_data.append(week_data)
+
+    # Подготовка данных для календаря текущей недели
+    # Определяем начало и конец текущей недели
+    start_of_week = current_date - timedelta(days=current_date.weekday())  # Понедельник недели
+    end_of_week = start_of_week + timedelta(days=6)  # Воскресенье недели
+
+    # Получаем игры для текущей недели
+    games_for_week_queryset = Game.objects.filter(
+        game_date__gte=start_of_week,
+        game_date__lte=end_of_week,
+        is_active=True
+    ).select_related('organizer').prefetch_related('participants').order_by('game_date', 'game_time')
+    games_for_week = list(games_for_week_queryset)
+
+    # Группируем игры по датам для недели
+    week_games_by_date = {}
+    for game in games_for_week:
+        date_str = game.game_date.strftime('%Y-%m-%d')
+        if date_str not in week_games_by_date:
+            week_games_by_date[date_str] = []
+        week_games_by_date[date_str].append({
+            'id': game.id,
+            'title': game.title,
+            'time': game.game_time.strftime('%H:%M'),
+            'location': game.location,
+            'sport_type': game.get_sport_type_display(),
+        })
+
+    # Формируем данные для календаря недели
+    week_calendar_data = []
+    for i in range(7):  # 7 дней недели
+        day_date = start_of_week + timedelta(days=i)
+        date_str = day_date.strftime('%Y-%m-%d')
+        games = week_games_by_date.get(date_str, [])
+
+        # Определяем название дня недели
+        ru_day_names = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+        if day_date == current_date:
+            day_name = 'Сегодня'
+        else:
+            day_name = ru_day_names[day_date.weekday()]
+
+        week_calendar_data.append({
+            'day': day_date.day,
+            'date': date_str,
+            'day_name': day_name,
+            'is_today': day_date == current_date,
+            'games': games
+        })
+
+    calendar_context = {
+        'days': calendar_data,
+        'week_days': week_calendar_data,
+        'today': current_date,
+        'month': current_month,
+        'year': current_year,
+        'month_name': calendar.month_name[current_month],
+        'prev_month': (current_month - 1) if current_month > 1 else 12,
+        'prev_year': current_year if current_month > 1 else current_year - 1,
+        'next_month': (current_month + 1) if current_month < 12 else 1,
+        'next_year': current_year if current_month < 12 else current_year + 1,
+    }
+
+    # Игры на сегодня
+    today_games_queryset = Game.objects.filter(
+        game_date=timezone.now().date(),
+        is_active=True
+    ).select_related('organizer').prefetch_related('participants').order_by('game_time')
+
+    # Получаем количество игр на сегодня (до преобразования в список)
+    today_games_count = today_games_queryset.count()
+
+    # Преобразуем в список, чтобы можно было итерировать дважды
+    today_games = list(today_games_queryset)
+
+    # Добавляем информацию о возможности присоединиться для каждого гейма
+    if request.user.is_authenticated:
+        for game in today_games:
+            game.can_join = (
+                game.organizer != request.user and
+                request.user not in game.participants.all() and
+                game.participants.count() < game.max_players
+            )
+    else:
+        # Для анонимных пользователей нельзя присоединиться
+        for game in today_games:
+            game.can_join = False
 
     context = {
         'page_title': 'Волейбольное сообщество - Главная',
         'total_courts': total_courts,
         'total_games': total_games,
         'total_users': total_users,
-        'upcoming_games': upcoming_games.count(),  # передаем количество, а не объект QuerySet
+        'today_games_count': today_games_count,  # количество игр на сегодня (COUNT)
+        'upcoming_games_count': upcoming_games_count,  # количество предстоящих игр (COUNT)
+        'indoor_courts': indoor_courts,  # количество зальных площадок
+        'outdoor_courts': outdoor_courts,  # количество открытых площадок
+        'beach_courts': beach_courts,  # количество пляжных площадок
+        'upcoming_games': upcoming_games_queryset,  # передаем объект QuerySet вместо количества
+        'today_games': today_games,  # добавляем игры на сегодня (список объектов)
         'recent_courts': recent_courts,
         'upcoming_bookings': upcoming_bookings,
-        'calendar_days': calendar_days,
-        'month_name': calendar.month_name[month],
-        'current_year': year,
-        'prev_month': prev_month_obj,
-        'next_month': next_month_obj,
         'today': today,
         'user_games': user_games,
+        'calendar': calendar_context,
+        'week_calendar': calendar_context['week_days'],  # Добавляем календарь недели в контекст
     }
 
     return render(request, 'myapp/home.html', context)
 
 @login_required
+def full_map_view(request):
+    """Полная карта волейбольных площадок из базы данных"""
+    # Получаем все активные площадки
+    courts = VolleyballCourt.objects.filter(
+        is_active=True
+    )
+
+    # Подготавливаем данные для карты
+    courts_data = []
+    for court in courts:
+        court_info = {
+            'id': court.id,
+            'name': court.name,
+            'address': court.address,
+            'city': court.city,
+            'court_type': court.court_type,
+            'court_type_display': court.get_court_type_display(),
+            'is_free': court.is_free,
+            'price_per_hour': float(court.price_per_hour) if court.price_per_hour else 0,
+            'is_lighted': court.is_lighted,
+            'has_parking': court.has_parking,
+            'has_showers': court.has_showers,
+            'has_cafe': court.has_cafe,
+            'has_locker_rooms': court.has_locker_rooms,
+            'has_equipment_rental': court.has_equipment_rental,
+            'description': court.description[:100] if court.description else '',
+            'working_days': court.working_days,
+            'opening_time': str(court.opening_time) if court.opening_time else '08:00',
+            'closing_time': str(court.closing_time) if court.closing_time else '22:00',
+            'phone': court.phone or '',
+            'website': court.website or '',
+            'photo_url': court.photo_url or '',
+            'booking_enabled': court.booking_enabled,
+            'min_booking_hours': court.min_booking_hours,
+            'max_booking_hours': court.max_booking_hours,
+            'advance_booking_days': court.advance_booking_days,
+            'capacity': court.courts_count,
+            'surface': court.get_surface_display(),
+        }
+
+        # Добавляем координаты если они есть
+        if court.latitude and court.longitude:
+            court_info['latitude'] = float(court.latitude)
+            court_info['longitude'] = float(court.longitude)
+            court_info['has_coordinates'] = True
+        else:
+            # Если нет координат, используем значения по умолчанию для города
+            court_info['latitude'] = 55.7558 if court.city == 'Москва' else 59.9343
+            court_info['longitude'] = 37.6173 if court.city == 'Москва' else 30.3351
+            court_info['has_coordinates'] = False
+
+        courts_data.append(court_info)
+
+    context = {
+        'page_title': 'Карта волейбольных площадок',
+        'courts': courts,
+        'courts_json': json.dumps(courts_data, ensure_ascii=False),
+        'courts_count': courts.count(),
+        'free_courts_count': courts.filter(is_free=True).count(),
+        'indoor_courts_count': courts.filter(court_type='indoor').count(),
+        'outdoor_courts_count': courts.filter(court_type='outdoor').count(),
+        'beach_courts_count': courts.filter(court_type='beach').count(),
+        'current_filters': {}
+    }
+
+    return render(request, 'myapp/full_map.html', context)
+
+
 def map_view(request):
     """Карта ТОЛЬКО ОДОБРЕННЫХ волейбольных площадок с функцией бронирования"""
-    
+
     # Получаем только одобренные и активные площадки
     courts = VolleyballCourt.objects.filter(
         status='approved',
@@ -1022,6 +1215,17 @@ def courts_api(request):
 def create_game(request):
     """Создание новой игры с привязкой к площадке"""
 
+    # Проверяем, есть ли параметр court в URL
+    court_id = request.GET.get('court')
+    initial_court = None
+
+    if court_id:
+        try:
+            initial_court = VolleyballCourt.objects.get(id=court_id, status='approved', is_active=True)
+        except VolleyballCourt.DoesNotExist:
+            messages.error(request, 'Выбранная площадка не найдена или не одобрена')
+            initial_court = None
+
     if request.method == 'POST':
         form = GameCreationForm(request.POST, user=request.user)
 
@@ -1059,6 +1263,9 @@ def create_game(request):
                 game.save()
 
                 # Автоматически добавляем организатора как участника
+                game.participants.add(request.user)
+
+                # Также добавляем в GameParticipation для совместимости
                 GameParticipation.objects.create(
                     user=request.user,
                     game=game,
@@ -1085,7 +1292,11 @@ def create_game(request):
                 for error in errors:
                     messages.error(request, f'Ошибка в поле "{field}": {error}')
     else:
-        form = GameCreationForm(user=request.user)
+        # Если есть начальная площадка, передаем ее в форму
+        if initial_court:
+            form = GameCreationForm(user=request.user, initial={'court': initial_court})
+        else:
+            form = GameCreationForm(user=request.user)
 
     # Доступные площадки (только одобренные)
     courts = VolleyballCourt.objects.filter(status='approved', is_active=True)
@@ -1114,27 +1325,57 @@ def game_detail(request, game_id):
     
     # Проверяем, может ли пользователь видеть эту игру
     if game.is_private and game.organizer != request.user:
-        if not GameParticipation.objects.filter(game=game, user=request.user).exists():
+        if request.user.is_anonymous or request.user not in game.participants.all():
             messages.error(request, 'Это приватная игра')
             return redirect('home')
     
-    # Участники игры
-    participants = GameParticipation.objects.filter(game=game).select_related('user')
-    
-    # Проверяем, участвует ли текущий пользователь
-    is_participant = participants.filter(user=request.user).exists()
-    can_join = not is_participant and game.participants.count() < game.max_players
-    
+    # Участники игры (используем прямую связь из модели Game)
+    participants = game.participants.all()
+
+    # Проверяем, участвует ли текущий пользователь (включая организатора)
+    is_participant = request.user.is_authenticated and (request.user in participants or request.user == game.organizer)
+    can_join = request.user.is_authenticated and request.user != game.organizer and not is_participant and game.participants.count() < game.max_players
+
     context = {
         'page_title': game.title,
         'game': game,
         'participants': participants,
         'is_participant': is_participant,
         'can_join': can_join,
-        'spots_left': game.max_players - game.participants.count(),
+        'spots_left': game.spots_left(),
+        'total_participants_count': game.participants.count(),  # Общее количество участников
     }
-    
+
     return render(request, 'myapp/game_detail.html', context)
+
+@login_required
+def leave_game(request, game_id):
+    """Покинуть игру"""
+
+    game = get_object_or_404(Game, id=game_id, is_active=True)
+
+    # Проверяем, может ли пользователь покинуть игру
+    if request.user == game.organizer:
+        messages.warning(request, 'Организатор не может покинуть свою игру')
+        return redirect('game_detail', game_id=game_id)
+
+    # Проверяем, участвует ли пользователь в игре
+    if request.user not in game.participants.all():
+        messages.warning(request, 'Вы не участвуете в этой игре')
+        return redirect('game_detail', game_id=game_id)
+
+    if request.method == 'POST':
+        # Удаляем пользователя из участников
+        game.participants.remove(request.user)
+
+        # Удаляем запись из GameParticipation
+        GameParticipation.objects.filter(game=game, user=request.user).delete()
+
+        messages.success(request, '❌ Вы покинули игру')
+        return redirect('game_detail', game_id=game_id)
+
+    # Если GET запрос, перенаправляем на страницу игры
+    return redirect('game_detail', game_id=game_id)
 
 @login_required
 def join_game(request, game_id):
@@ -1142,11 +1383,16 @@ def join_game(request, game_id):
     
     game = get_object_or_404(Game, id=game_id, is_active=True)
     
+    # Проверяем, может ли пользователь присоединиться
+    if request.user == game.organizer:
+        messages.warning(request, 'Вы являетесь организатором этой игры')
+        return redirect('game_detail', game_id=game_id)
+
     # Проверяем, можно ли присоединиться
     if game.participants.count() >= game.max_players:
         messages.error(request, 'В игре нет свободных мест')
         return redirect('game_detail', game_id=game_id)
-    
+
     # Проверяем, не участвует ли уже пользователь
     if GameParticipation.objects.filter(game=game, user=request.user).exists():
         messages.warning(request, 'Вы уже участвуете в этой игре')
@@ -1161,7 +1407,10 @@ def join_game(request, game_id):
             participation.game = game
             participation.status = 'pending' if game.is_private else 'confirmed'
             participation.save()
-            
+
+            # Также добавляем пользователя в participants ManyToManyField
+            game.participants.add(request.user)
+
             if game.is_private:
                 messages.success(request, '✅ Заявка на участие отправлена организатору')
             else:
@@ -1376,7 +1625,7 @@ def edit_profile(request):
         form = ProfileEditForm(instance=profile)
     
     context = {
-        'page_title': 'Редактирование профиля',
+        'page_title': 'Редактирование проф��ля',
         'form': form,
         'profile': profile,
         'user': request.user,
@@ -1486,7 +1735,7 @@ def add_review(request, court_id):
     # Проверяем, есть ли уже отзыв от этого пользователя
     existing_review = Review.objects.filter(court=court, user=request.user).first()
     
-    # Проверяем, было ли бронирование у этого пользователя
+    # Пров��ряем, было ли бронирование у этого пользователя
     has_booking = CourtBooking.objects.filter(
         court=court,
         user=request.user,
@@ -1494,7 +1743,7 @@ def add_review(request, court_id):
     ).exists()
     
     if not has_booking:
-        messages.warning(request, 'Вы можете оставить отзыв только после бронирования площадки')
+        messages.warning(request, 'Вы можете остави��ь отзыв только по��ле бронирования площадки')
         return redirect('court_detail', court_id=court_id)
     
     if request.method == 'POST':
@@ -1547,7 +1796,7 @@ def update_court_rating(court):
 # ============================================================================
 
 def court_detail(request, court_id):
-    """Детальная страница площадки"""
+    """Детальн��я страница площадки"""
     
     court = get_object_or_404(VolleyballCourt, id=court_id, status='approved')
     
@@ -1727,6 +1976,38 @@ def handler400(request, exception):
     """Обработчик 400 ошибки"""
     return render(request, 'myapp/400.html', status=400)
 
+
+def event_calendar(request):
+    """Страница календаря событий"""
+    # Получаем все игры из базы данных
+    games = Game.objects.filter(is_active=True).select_related('organizer', 'court').order_by('game_date', 'game_time')
+
+    # Подготовим данные для календаря
+    games_by_date = {}
+    for game in games:
+        date_key = game.game_date.strftime('%Y-%m-%d')
+        if date_key not in games_by_date:
+            games_by_date[date_key] = []
+        games_by_date[date_key].append({
+            'id': game.id,
+            'title': game.title,
+            'description': game.description,
+            'time': game.game_time.strftime('%H:%M'),
+            'location': game.location,
+            'organizer': game.organizer.username,
+            'sport_type': game.get_sport_type_display(),
+            'skill_level': game.get_skill_level_display(),
+            'max_players': game.max_players,
+            'current_players': game.participants.count(),
+        })
+
+    context = {
+        'page_title': 'Календарь событий',
+        'games_by_date': games_by_date,
+        'all_games': games,
+    }
+    return render(request, 'myapp/event_calendar.html', context)
+
 # ============================================================================
 # ФУНКЦИИ ДЛЯ ПРОФИЛЯ И ДРУЗЕЙ (добавьте эти функции в views.py)
 # ============================================================================
@@ -1828,5 +2109,191 @@ def remove_friend(request, friendship_id):
         user_id = friendship.to_user.id if friendship.from_user == request.user else friendship.from_user.id
         friendship.delete()
         return redirect('user_profile', user_id=user_id)
-    
+
     return redirect('friends')
+
+
+@login_required
+def create_court(request):
+    """Форма для создания новой площадки (отправляется на модерацию)"""
+
+    if request.method == 'POST':
+        form = CourtSuggestionForm(request.POST, request.FILES)
+
+        if form.is_valid():
+            try:
+                # Создаём площадку
+                court = form.save(commit=False)
+                court.suggested_by = request.user
+                court.status = 'pending'
+                court.is_active = True
+                court.is_verified = False
+
+                # Сохраняем координаты если они есть
+                latitude = form.cleaned_data.get('latitude')
+                longitude = form.cleaned_data.get('longitude')
+                if latitude and longitude:
+                    court.latitude = latitude
+                    court.longitude = longitude
+
+                court.save()
+
+                # Обрабатываем загруженные фото
+                photos = request.FILES.getlist('photos')
+                for i, photo in enumerate(photos):
+                    is_main = (i == 0)  # Первое фото делаем главным
+                    CourtPhoto.objects.create(
+                        court=court,
+                        photo=photo,
+                        is_main=is_main
+                    )
+
+                messages.success(request,
+                    '✅ Спасибо! Ваша площадка отправлена на модерацию. '
+                    'Площадка появится на карте после проверки администратором.'
+                )
+
+                return redirect('my_suggestions')
+
+            except Exception as e:
+                messages.error(request, f'Ошибка при сохранении: {str(e)}')
+        else:
+            messages.error(request, 'Пожалуйста, исправьте ошибки в форме')
+    else:
+        form = CourtSuggestionForm()
+
+    context = {
+        'page_title': 'Создать новую площадку',
+        'form': form,
+    }
+
+    return render(request, 'myapp/create_court.html', context)
+
+
+def map_view(request):
+    """Отображение страницы с картой волейбольных площадок"""
+    return render(request, 'myapp/map.html')
+
+
+def courts_api(request):
+    """API для получения данных о волейбольных площадках"""
+    courts = VolleyballCourt.objects.filter(
+        is_active=True,
+        status='approved'  # Только одобренные площадки
+    ).values(
+        'id', 'name', 'address', 'latitude', 'longitude',
+        'court_type', 'surface', 'is_free', 'is_lighted',
+        'has_parking', 'has_showers', 'has_locker_rooms',
+        'has_equipment_rental', 'has_cafe', 'description',
+        'status', 'price_per_hour', 'opening_time', 'closing_time'
+    )
+
+    # Преобразуем Decimal значения в float для JSON сериализации
+    courts_list = []
+    for court in courts:
+        court_dict = {}
+        for key, value in court.items():
+            if isinstance(value, decimal.Decimal):
+                court_dict[key] = float(value)
+            else:
+                court_dict[key] = value
+        courts_list.append(court_dict)
+
+    return JsonResponse(courts_list, safe=False)
+
+
+def search_courts_view(request):
+    """Отображение страницы поиска волейбольных площадок"""
+    return render(request, 'map.html')
+
+
+def search_courts_api(request):
+    """API для поиска волейбольных площадок"""
+    query = request.GET.get('query', '')
+    court_type = request.GET.get('court_type', '')
+    surface = request.GET.get('surface', '')
+    city = request.GET.get('city', '')
+    price_min = request.GET.get('price_min', '')
+    price_max = request.GET.get('price_max', '')
+    free_only = request.GET.get('free_only', '') == 'true'
+    with_lighting = request.GET.get('with_lighting', '') == 'true'
+    with_parking = request.GET.get('with_parking', '') == 'true'
+    with_showers = request.GET.get('with_showers', '') == 'true'
+    with_locker_rooms = request.GET.get('with_locker_rooms', '') == 'true'
+    with_equipment = request.GET.get('with_equipment', '') == 'true'
+
+    # Начинаем с базового QuerySet
+    courts = VolleyballCourt.objects.filter(
+        is_active=True,
+        status='approved'
+    )
+
+    # Применяем фильтры
+    if query:
+        courts = courts.filter(
+            Q(name__icontains=query) | Q(address__icontains=query)
+        )
+
+    if court_type:
+        courts = courts.filter(court_type=court_type)
+
+    if surface:
+        courts = courts.filter(surface=surface)
+
+    if city:
+        courts = courts.filter(city__icontains=city)
+
+    if price_min:
+        try:
+            price_min_val = int(price_min)
+            courts = courts.filter(price_per_hour__gte=price_min_val)
+        except ValueError:
+            pass
+
+    if price_max:
+        try:
+            price_max_val = int(price_max)
+            courts = courts.filter(price_per_hour__lte=price_max_val)
+        except ValueError:
+            pass
+
+    if free_only:
+        courts = courts.filter(is_free=True)
+
+    if with_lighting:
+        courts = courts.filter(is_lighted=True)
+
+    if with_parking:
+        courts = courts.filter(has_parking=True)
+
+    if with_showers:
+        courts = courts.filter(has_showers=True)
+
+    if with_locker_rooms:
+        courts = courts.filter(has_locker_rooms=True)
+
+    if with_equipment:
+        courts = courts.filter(has_equipment_rental=True)
+
+    # Получаем значения
+    courts = courts.values(
+        'id', 'name', 'address', 'latitude', 'longitude',
+        'court_type', 'surface', 'is_free', 'is_lighted',
+        'has_parking', 'has_showers', 'has_locker_rooms',
+        'has_equipment_rental', 'has_cafe', 'description',
+        'status', 'price_per_hour', 'opening_time', 'closing_time',
+        'city', 'rating'
+    )
+
+    # Преобразуем Decimal значения в float для JSON сериализации
+    courts_list = []
+    for court in courts:
+        court_dict = {}
+        for key, value in court.items():
+            if isinstance(value, decimal.Decimal):
+                court_dict[key] = float(value)
+            else:
+                court_dict[key] = value
+        courts_list.append(court_dict)
+
+    return JsonResponse(courts_list, safe=False)

@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мои предложения площадок | Волейбольное сообщество</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin-top: 20px;
+        }
+
+        .suggestions-container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .suggestion-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 5px solid #667eea;
+            transition: transform 0.3s;
+        }
+
+        .suggestion-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-approved {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-rejected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-needs-info {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .stats-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .stats-label {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .tab-content {
+            padding: 20px 0;
+        }
+
+        .nav-tabs .nav-link.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .court-info {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .court-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f1f1;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .detail-value {
+            color: #6c757d;
+        }
+
+        .btn-create-court {
+            background: linear-gradient(90deg, #4f46e5, #7c3aed);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-weight: 600;
+        }
+
+        .btn-create-court:hover {
+            background: linear-gradient(90deg, #4338ca, #6d28d9);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="suggestions-container">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="fas fa-map-pin me-2"></i>Мои предложения площадок</h1>
+                <div>
+                    <a href="{% url 'home' %}" class="btn btn-outline-secondary me-2">
+                        <i class="fas fa-home me-1"></i>На главную
+                    </a>
+                    <a href="{% url 'create_court' %}" class="btn btn-create-court">
+                        <i class="fas fa-plus me-1"></i>Добавить площадку
+                    </a>
+                </div>
+            </div>
+
+            <!-- Статистика -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="stats-card">
+                        <div class="stats-number">{{ total_count }}</div>
+                        <div class="stats-label">Всего</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stats-card" style="background: linear-gradient(135deg, #4f46e5, #7c3aed);">
+                        <div class="stats-number">{{ pending_count }}</div>
+                        <div class="stats-label">На модерации</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stats-card" style="background: linear-gradient(135deg, #10b981, #059669);">
+                        <div class="stats-number">{{ approved_count }}</div>
+                        <div class="stats-label">Одобрено</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stats-card" style="background: linear-gradient(135deg, #ef4444, #dc2626);">
+                        <div class="stats-number">{{ rejected_count }}</div>
+                        <div class="stats-label">Отклонено</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Вкладки -->
+            <ul class="nav nav-tabs" id="suggestionsTab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab">
+                        <i class="fas fa-list me-1"></i>Все ({{ total_count }})
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" type="button" role="tab">
+                        <i class="fas fa-hourglass-half me-1"></i>На модерации ({{ pending_count }})
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="approved-tab" data-bs-toggle="tab" data-bs-target="#approved" type="button" role="tab">
+                        <i class="fas fa-check-circle me-1"></i>Одобрено ({{ approved_count }})
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="rejected-tab" data-bs-toggle="tab" data-bs-target="#rejected" type="button" role="tab">
+                        <i class="fas fa-times-circle me-1"></i>Отклонено ({{ rejected_count }})
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="needs-info-tab" data-bs-toggle="tab" data-bs-target="#needs-info" type="button" role="tab">
+                        <i class="fas fa-exclamation-triangle me-1"></i>Требует уточнений ({{ needs_info_count }})
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="suggestionsTabContent">
+                <!-- Все площадки -->
+                <div class="tab-pane fade show active" id="all" role="tabpanel">
+                    {% if all_courts %}
+                        {% for court in all_courts %}
+                            <div class="suggestion-card">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h4 class="mb-2">{{ court.name }}</h4>
+                                        <p class="text-muted mb-2"><i class="fas fa-map-marker-alt me-2"></i>{{ court.address }}</p>
+                                        <span class="status-badge status-{{ court.status }}">{{ court.get_status_display }}</span>
+                                    </div>
+                                    <div class="text-end">
+                                        <small class="text-muted">Предложено: {{ court.created_at|date:"d.m.Y H:i" }}</small>
+                                    </div>
+                                </div>
+
+                                {% if court.moderator_comment %}
+                                    <div class="alert alert-info mt-3">
+                                        <i class="fas fa-comment me-2"></i><strong>Комментарий модератора:</strong> {{ court.moderator_comment }}
+                                    </div>
+                                {% endif %}
+
+                                <div class="court-info">
+                                    <div class="court-details">
+                                        <div class="detail-item">
+                                            <span class="detail-label">Тип площадки:</span>
+                                            <span class="detail-value">{{ court.get_court_type_display }}</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Покрытие:</span>
+                                            <span class="detail-value">{{ court.get_surface_display|default:"Не указано" }}</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Количество:</span>
+                                            <span class="detail-value">{{ court.courts_count }} шт.</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Бесплатно:</span>
+                                            <span class="detail-value">{{ court.is_free|yesno:"Да,Нет" }}</span>
+                                        </div>
+                                        {% if court.price_per_hour %}
+                                        <div class="detail-item">
+                                            <span class="detail-label">Цена за час:</span>
+                                            <span class="detail-value">{{ court.price_per_hour }} руб.</span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-map-pin fa-3x text-muted mb-3"></i>
+                            <h4 class="text-muted">Пока нет предложенных площадок</h4>
+                            <p class="text-muted">Добавьте свою первую площадку, чтобы начать</p>
+                            <a href="{% url 'create_court' %}" class="btn btn-create-court">
+                                <i class="fas fa-plus me-1"></i>Предложить площадку
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- На модерации -->
+                <div class="tab-pane fade" id="pending" role="tabpanel">
+                    {% if pending_courts %}
+                        {% for court in pending_courts %}
+                            <div class="suggestion-card">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h4 class="mb-2">{{ court.name }}</h4>
+                                        <p class="text-muted mb-2"><i class="fas fa-map-marker-alt me-2"></i>{{ court.address }}</p>
+                                        <span class="status-badge status-{{ court.status }}">{{ court.get_status_display }}</span>
+                                    </div>
+                                    <div class="text-end">
+                                        <small class="text-muted">Предложено: {{ court.created_at|date:"d.m.Y H:i" }}</small>
+                                    </div>
+                                </div>
+
+                                <div class="court-info">
+                                    <div class="court-details">
+                                        <div class="detail-item">
+                                            <span class="detail-label">Тип площадки:</span>
+                                            <span class="detail-value">{{ court.get_court_type_display }}</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Покрытие:</span>
+                                            <span class="detail-value">{{ court.get_surface_display|default:"Не указано" }}</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Количество:</span>
+                                            <span class="detail-value">{{ court.courts_count }} шт.</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-hourglass-half fa-3x text-muted mb-3"></i>
+                            <h4 class="text-muted">Нет площадок на модерации</h4>
+                            <p class="text-muted">Все ваши предложения в других статусах</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Одобрено -->
+                <div class="tab-pane fade" id="approved" role="tabpanel">
+                    {% if approved_courts %}
+                        {% for court in approved_courts %}
+                            <div class="suggestion-card">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h4 class="mb-2">{{ court.name }}</h4>
+                                        <p class="text-muted mb-2"><i class="fas fa-map-marker-alt me-2"></i>{{ court.address }}</p>
+                                        <span class="status-badge status-{{ court.status }}">{{ court.get_status_display }}</span>
+                                    </div>
+                                    <div class="text-end">
+                                        <small class="text-muted">Одобрено: {{ court.reviewed_at|date:"d.m.Y H:i"|default:"-" }}</small>
+                                    </div>
+                                </div>
+
+                                <div class="court-info">
+                                    <div class="court-details">
+                                        <div class="detail-item">
+                                            <span class="detail-label">Тип площадки:</span>
+                                            <span class="detail-value">{{ court.get_court_type_display }}</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Покрытие:</span>
+                                            <span class="detail-value">{{ court.get_surface_display|default:"Не указано" }}</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Количество:</span>
+                                            <span class="detail-value">{{ court.courts_count }} шт.</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-check-circle fa-3x text-muted mb-3"></i>
+                            <h4 class="text-muted">Нет одобренных площадок</h4>
+                            <p class="text-muted">Все ваши предложения в других статусах</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Отклонено -->
+                <div class="tab-pane fade" id="rejected" role="tabpanel">
+                    {% if rejected_courts %}
+                        {% for court in rejected_courts %}
+                            <div class="suggestion-card">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h4 class="mb-2">{{ court.name }}</h4>
+                                        <p class="text-muted mb-2"><i class="fas fa-map-marker-alt me-2"></i>{{ court.address }}</p>
+                                        <span class="status-badge status-{{ court.status }}">{{ court.get_status_display }}</span>
+                                    </div>
+                                    <div class="text-end">
+                                        <small class="text-muted">Отклонено: {{ court.reviewed_at|date:"d.m.Y H:i"|default:"-" }}</small>
+                                    </div>
+                                </div>
+
+                                {% if court.moderator_comment %}
+                                    <div class="alert alert-warning mt-3">
+                                        <i class="fas fa-comment me-2"></i><strong>Комментарий модератора:</strong> {{ court.moderator_comment }}
+                                    </div>
+                                {% endif %}
+
+                                <div class="court-info">
+                                    <div class="court-details">
+                                        <div class="detail-item">
+                                            <span class="detail-label">Тип площадки:</span>
+                                            <span class="detail-value">{{ court.get_court_type_display }}</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Покрытие:</span>
+                                            <span class="detail-value">{{ court.get_surface_display|default:"Не указано" }}</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Количество:</span>
+                                            <span class="detail-value">{{ court.courts_count }} шт.</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-times-circle fa-3x text-muted mb-3"></i>
+                            <h4 class="text-muted">Нет отклоненных площадок</h4>
+                            <p class="text-muted">Все ваши предложения в других статусах</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Требует уточнений -->
+                <div class="tab-pane fade" id="needs-info" role="tabpanel">
+                    {% if needs_info_courts %}
+                        {% for court in needs_info_courts %}
+                            <div class="suggestion-card">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h4 class="mb-2">{{ court.name }}</h4>
+                                        <p class="text-muted mb-2"><i class="fas fa-map-marker-alt me-2"></i>{{ court.address }}</p>
+                                        <span class="status-badge status-{{ court.status }}">{{ court.get_status_display }}</span>
+                                    </div>
+                                    <div class="text-end">
+                                        <small class="text-muted">Требует уточнений: {{ court.reviewed_at|date:"d.m.Y H:i"|default:"-" }}</small>
+                                    </div>
+                                </div>
+
+                                {% if court.moderator_comment %}
+                                    <div class="alert alert-warning mt-3">
+                                        <i class="fas fa-comment me-2"></i><strong>Комментарий модератора:</strong> {{ court.moderator_comment }}
+                                    </div>
+                                {% endif %}
+
+                                <div class="court-info">
+                                    <div class="court-details">
+                                        <div class="detail-item">
+                                            <span class="detail-label">Тип площадки:</span>
+                                            <span class="detail-value">{{ court.get_court_type_display }}</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Покрытие:</span>
+                                            <span class="detail-value">{{ court.get_surface_display|default:"Не указано" }}</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Количество:</span>
+                                            <span class="detail-value">{{ court.courts_count }} шт.</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-exclamation-triangle fa-3x text-muted mb-3"></i>
+                            <h4 class="text-muted">Нет площадок, требующих уточнений</h4>
+                            <p class="text-muted">Все ваши предложения в других статусах</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

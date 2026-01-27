@@ -1,0 +1,372 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-10 mx-auto">
+            <div class="content-box">
+                <h3><i class="fas fa-plus-circle"></i> {{ page_title }}</h3>
+
+                <form method="post" enctype="multipart/form-data" id="createCourtForm">
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label for="{{ form.name.id_for_label }}" class="form-label"><strong>{{ form.name.label }} *</strong></label>
+                        {{ form.name }}
+                        {% if form.name.help_text %}
+                            <small class="form-text text-muted">{{ form.name.help_text }}</small>
+                        {% endif %}
+                        {% if form.name.errors %}
+                            <div class="text-danger">{{ form.name.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.city.id_for_label }}" class="form-label"><strong>{{ form.city.label }} *</strong></label>
+                                {{ form.city }}
+                                {% if form.city.help_text %}
+                                    <small class="form-text text-muted">{{ form.city.help_text }}</small>
+                                {% endif %}
+                                {% if form.city.errors %}
+                                    <div class="text-danger">{{ form.city.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.address.id_for_label }}" class="form-label"><strong>{{ form.address.label }} *</strong></label>
+                                {{ form.address }}
+                                {% if form.address.help_text %}
+                                    <small class="form-text text-muted">{{ form.address.help_text }}</small>
+                                {% endif %}
+                                {% if form.address.errors %}
+                                    <div class="text-danger">{{ form.address.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.description.id_for_label }}" class="form-label"><strong>{{ form.description.label }} *</strong></label>
+                        {{ form.description }}
+                        {% if form.description.help_text %}
+                            <small class="form-text text-muted">{{ form.description.help_text }}</small>
+                        {% endif %}
+                        {% if form.description.errors %}
+                            <div class="text-danger">{{ form.description.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.court_type.id_for_label }}" class="form-label"><strong>{{ form.court_type.label }}</strong></label>
+                                {{ form.court_type }}
+                                {% if form.court_type.errors %}
+                                    <div class="text-danger">{{ form.court_type.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.surface.id_for_label }}" class="form-label"><strong>{{ form.surface.label }}</strong></label>
+                                {{ form.surface }}
+                                {% if form.surface.errors %}
+                                    <div class="text-danger">{{ form.surface.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.courts_count.id_for_label }}" class="form-label"><strong>{{ form.courts_count.label }}</strong></label>
+                                {{ form.courts_count }}
+                                {% if form.courts_count.help_text %}
+                                    <small class="form-text text-muted">{{ form.courts_count.help_text }}</small>
+                                {% endif %}
+                                {% if form.courts_count.errors %}
+                                    <div class="text-danger">{{ form.courts_count.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.tags.id_for_label }}" class="form-label"><strong>{{ form.tags.label }}</strong></label>
+                                {{ form.tags }}
+                                {% if form.tags.help_text %}
+                                    <small class="form-text text-muted">{{ form.tags.help_text }}</small>
+                                {% endif %}
+                                {% if form.tags.errors %}
+                                    <div class="text-danger">{{ form.tags.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    {{ form.is_free }}
+                                    <label class="form-check-label" for="{{ form.is_free.id_for_label }}">{{ form.is_free.label }}</label>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="{{ form.price_per_hour.id_for_label }}" class="form-label"><strong>{{ form.price_per_hour.label }}</strong></label>
+                                {{ form.price_per_hour }}
+                                {% if form.price_per_hour.help_text %}
+                                    <small class="form-text text-muted">{{ form.price_per_hour.help_text }}</small>
+                                {% endif %}
+                                {% if form.price_per_hour.errors %}
+                                    <div class="text-danger">{{ form.price_per_hour.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="mb-3">
+                                <label for="{{ form.price_details.id_for_label }}" class="form-label"><strong>{{ form.price_details.label }}</strong></label>
+                                {{ form.price_details }}
+                                {% if form.price_details.help_text %}
+                                    <small class="form-text text-muted">{{ form.price_details.help_text }}</small>
+                                {% endif %}
+                                {% if form.price_details.errors %}
+                                    <div class="text-danger">{{ form.price_details.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    {{ form.is_lighted }}
+                                    <label class="form-check-label" for="{{ form.is_lighted.id_for_label }}">{{ form.is_lighted.label }}</label>
+                                </div>
+                                <div class="form-check">
+                                    {{ form.has_showers }}
+                                    <label class="form-check-label" for="{{ form.has_showers.id_for_label }}">{{ form.has_showers.label }}</label>
+                                </div>
+                                <div class="form-check">
+                                    {{ form.has_locker_rooms }}
+                                    <label class="form-check-label" for="{{ form.has_locker_rooms.id_for_label }}">{{ form.has_locker_rooms.label }}</label>
+                                </div>
+                                <div class="form-check">
+                                    {{ form.has_equipment_rental }}
+                                    <label class="form-check-label" for="{{ form.has_equipment_rental.id_for_label }}">{{ form.has_equipment_rental.label }}</label>
+                                </div>
+                                <div class="form-check">
+                                    {{ form.has_parking }}
+                                    <label class="form-check-label" for="{{ form.has_parking.id_for_label }}">{{ form.has_parking.label }}</label>
+                                </div>
+                                <div class="form-check">
+                                    {{ form.has_cafe }}
+                                    <label class="form-check-label" for="{{ form.has_cafe.id_for_label }}">{{ form.has_cafe.label }}</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.opening_time.id_for_label }}" class="form-label"><strong>{{ form.opening_time.label }}</strong></label>
+                                {{ form.opening_time }}
+                                {% if form.opening_time.errors %}
+                                    <div class="text-danger">{{ form.opening_time.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.closing_time.id_for_label }}" class="form-label"><strong>{{ form.closing_time.label }}</strong></label>
+                                {{ form.closing_time }}
+                                {% if form.closing_time.errors %}
+                                    <div class="text-danger">{{ form.closing_time.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.working_days.id_for_label }}" class="form-label"><strong>{{ form.working_days.label }}</strong></label>
+                        {{ form.working_days }}
+                        {% if form.working_days.help_text %}
+                            <small class="form-text text-muted">{{ form.working_days.help_text }}</small>
+                        {% endif %}
+                        {% if form.working_days.errors %}
+                            <div class="text-danger">{{ form.working_days.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.phone.id_for_label }}" class="form-label"><strong>{{ form.phone.label }}</strong></label>
+                                {{ form.phone }}
+                                {% if form.phone.help_text %}
+                                    <small class="form-text text-muted">{{ form.phone.help_text }}</small>
+                                {% endif %}
+                                {% if form.phone.errors %}
+                                    <div class="text-danger">{{ form.phone.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.email.id_for_label }}" class="form-label"><strong>{{ form.email.label }}</strong></label>
+                                {{ form.email }}
+                                {% if form.email.errors %}
+                                    <div class="text-danger">{{ form.email.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.website.id_for_label }}" class="form-label"><strong>{{ form.website.label }}</strong></label>
+                        {{ form.website }}
+                        {% if form.website.help_text %}
+                            <small class="form-text text-muted">{{ form.website.help_text }}</small>
+                        {% endif %}
+                        {% if form.website.errors %}
+                            <div class="text-danger">{{ form.website.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.photo_url.id_for_label }}" class="form-label"><strong>{{ form.photo_url.label }}</strong></label>
+                        {{ form.photo_url }}
+                        {% if form.photo_url.help_text %}
+                            <small class="form-text text-muted">{{ form.photo_url.help_text }}</small>
+                        {% endif %}
+                        {% if form.photo_url.errors %}
+                            <div class="text-danger">{{ form.photo_url.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.photos.id_for_label }}" class="form-label"><strong>{{ form.photos.label }}</strong></label>
+                        {{ form.photos }}
+                        {% if form.photos.help_text %}
+                            <small class="form-text text-muted">{{ form.photos.help_text }}</small>
+                        {% endif %}
+                        {% if form.photos.errors %}
+                            <div class="text-danger">{{ form.photos.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.min_booking_hours.id_for_label }}" class="form-label"><strong>{{ form.min_booking_hours.label }}</strong></label>
+                                {{ form.min_booking_hours }}
+                                {% if form.min_booking_hours.help_text %}
+                                    <small class="form-text text-muted">{{ form.min_booking_hours.help_text }}</small>
+                                {% endif %}
+                                {% if form.min_booking_hours.errors %}
+                                    <div class="text-danger">{{ form.min_booking_hours.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.max_booking_hours.id_for_label }}" class="form-label"><strong>{{ form.max_booking_hours.label }}</strong></label>
+                                {{ form.max_booking_hours }}
+                                {% if form.max_booking_hours.help_text %}
+                                    <small class="form-text text-muted">{{ form.max_booking_hours.help_text }}</small>
+                                {% endif %}
+                                {% if form.max_booking_hours.errors %}
+                                    <div class="text-danger">{{ form.max_booking_hours.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.advance_booking_days.id_for_label }}" class="form-label"><strong>{{ form.advance_booking_days.label }}</strong></label>
+                        {{ form.advance_booking_days }}
+                        {% if form.advance_booking_days.help_text %}
+                            <small class="form-text text-muted">{{ form.advance_booking_days.help_text }}</small>
+                        {% endif %}
+                        {% if form.advance_booking_days.errors %}
+                            <div class="text-danger">{{ form.advance_booking_days.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.booking_enabled }}
+                            <label class="form-check-label" for="{{ form.booking_enabled.id_for_label }}">{{ form.booking_enabled.label }}</label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.accept_rules }}
+                            <label class="form-check-label" for="{{ form.accept_rules.id_for_label }}">{{ form.accept_rules.label }}</label>
+                        </div>
+                        {% if form.accept_rules.errors %}
+                            <div class="text-danger">{{ form.accept_rules.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-plus-circle"></i> Добавить площадку
+                        </button>
+                        <a href="{% url 'home' %}" class="btn btn-secondary">Отмена</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Обработка изменения чекбокса "Бесплатная"
+    const isFreeCheckbox = document.getElementById('{{ form.is_free.id_for_label }}');
+    const priceInput = document.getElementById('{{ form.price_per_hour.id_for_label }}');
+
+    if (isFreeCheckbox && priceInput) {
+        function togglePriceInput() {
+            if (isFreeCheckbox.checked) {
+                priceInput.disabled = true;
+                priceInput.value = 0;
+            } else {
+                priceInput.disabled = false;
+            }
+        }
+
+        // Установим начальное состояние
+        togglePriceInput();
+
+        // Добавим обработчик события
+        isFreeCheckbox.addEventListener('change', togglePriceInput);
+    }
+
+    // Добавим валидацию формы
+    const form = document.getElementById('createCourtForm');
+
+    form.addEventListener('submit', function(e) {
+        // Проверим, что правила приняты
+        const acceptRules = document.getElementById('{{ form.accept_rules.id_for_label }}');
+        if (acceptRules && !acceptRules.checked) {
+            e.preventDefault();
+            alert('Пожалуйста, подтвердите, что вы согласны с правилами сообщества.');
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

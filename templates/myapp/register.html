@@ -170,12 +170,12 @@
                 <label for="id_position" class="form-label">
                     <i class="fas fa-volleyball-ball"></i> Позиция в волейболе
                 </label>
-                <input type="text" 
-                       name="position" 
-                       id="id_position" 
-                       class="form-control" 
-                       placeholder="Например: нападающий, связующий и т.д."
-                       {% if form.position.value %}value="{{ form.position.value }}"{% endif %}>
+                <select name="position" id="id_position" class="form-control">
+                    <option value="">Выберите позицию</option>
+                    {% for value, label in form.position.field.choices %}
+                        <option value="{{ value }}" {% if form.position.value == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
                 {% if form.position.help_text %}
                     <span class="helptext">{{ form.position.help_text }}</span>
                 {% endif %}

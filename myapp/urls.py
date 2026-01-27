@@ -8,6 +8,8 @@ urlpatterns = [
     # ============================================================================
     path('', views.home, name='home'),  # ← ИСПРАВЛЕНО: было 'base'
     path('map/', views.map_view, name='map'),
+    path('full-map/', views.full_map_view, name='full_map'),
+    path('search-courts/', views.search_courts_view, name='search_courts'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('court/', views.court_page, name='court_page'),
     path('court/<int:court_id>/', views.court_detail, name='court_detail'),
@@ -27,6 +29,7 @@ urlpatterns = [
     # ПЛОЩАДКИ И МОДЕРАЦИЯ
     # ============================================================================
     path('suggest-court/', views.suggest_court, name='suggest_court'),
+    path('create-court/', views.create_court, name='create_court'),
     path('my-suggestions/', views.my_suggestions, name='my_suggestions'),
     
     path('moderation/', views.moderation_dashboard, name='moderation_dashboard'),
@@ -39,6 +42,7 @@ urlpatterns = [
     path('api/courts/<int:court_id>/', views.court_detail_api, name='court_detail_api'),
     path('api/check-availability/', views.check_availability, name='check_availability'),
     path('api/time-slots/<int:court_id>/', views.get_time_slots, name='get_time_slots'),
+    path('api/search-courts/', views.search_courts_api, name='search_courts_api'),
     
     # ============================================================================
     # СИСТЕМА ИГР
@@ -46,6 +50,7 @@ urlpatterns = [
     path('create_game/', views.create_game, name='create_game'),
     path('game/<int:game_id>/', views.game_detail, name='game_detail'),
     path('game/<int:game_id>/join/', views.join_game, name='join_game'),
+    path('game/<int:game_id>/leave/', views.leave_game, name='leave_game'),
     path('my-games/', views.my_games, name='my_games'),
     path('api/games-by-date/', views.games_by_date_api, name='games_by_date_api'),
     # ============================================================================
@@ -86,4 +91,7 @@ urlpatterns = [
     path('500/', views.handler500, name='handler500'),
     path('403/', views.handler403, name='handler403'),
     path('400/', views.handler400, name='handler400'),
+
+    # Календарь событий
+    path('events-calendar/', views.event_calendar, name='event_calendar'),
 ]

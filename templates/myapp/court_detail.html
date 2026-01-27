@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ court.name }} | Волейбольное сообщество</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .court-detail-container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            width: 100%;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        .court-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .court-name {
+            color: #4f46e5;
+            font-weight: 700;
+        }
+
+        .court-type-badge {
+            font-size: 0.8em;
+            padding: 5px 10px;
+            border-radius: 20px;
+            color: white;
+        }
+
+        .indoor { background-color: #4f46e5; }
+        .outdoor { background-color: #10b981; }
+        .beach { background-color: #f59e0b; }
+
+        .court-status-badge {
+            font-size: 0.8em;
+            padding: 5px 10px;
+            border-radius: 20px;
+            color: white;
+        }
+
+        .approved { background-color: #10b981; }
+        .pending { background-color: #f59e0b; }
+        .rejected { background-color: #ef4444; }
+
+        .amenities-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .amenity-item {
+            background-color: #e0e7ff;
+            color: #4f46e5;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8em;
+        }
+
+        .price-display {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #4f46e5;
+        }
+
+        .map-container {
+            height: 400px;
+            width: 100%;
+            border-radius: 10px;
+            margin-top: 20px;
+            background-color: #e6e6e6;
+        }
+
+        .section-title {
+            color: #4f46e5;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 5px;
+            margin-top: 30px;
+            margin-bottom: 20px;
+        }
+
+        .photo-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .photo-item {
+            border-radius: 10px;
+            overflow: hidden;
+            height: 150px;
+            background-color: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .photo-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .booking-btn {
+            background: linear-gradient(90deg, #4f46e5, #7c3aed);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-weight: 600;
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        .booking-btn:hover {
+            background: linear-gradient(90deg, #4338ca, #6d28d9);
+            color: white;
+        }
+
+        .review-section {
+            margin-top: 30px;
+        }
+
+        .review-card {
+            border: 1px solid #eee;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .rating-stars {
+            color: #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="court-detail-container">
+            <div class="court-header">
+                <h1 class="court-name">{{ court.name }}</h1>
+                <div class="d-flex justify-content-center gap-2 mt-2">
+                    <span class="court-type-badge {{ court.court_type }}">{{ court.get_court_type_display }}</span>
+                    <span class="court-status-badge {{ court.status }}">{{ court.get_status_display }}</span>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5><i class="fas fa-map-marker-alt text-primary"></i> Адрес</h5>
+                            <p>{{ court.address }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5><i class="fas fa-city text-primary"></i> Город</h5>
+                            <p>{{ court.city }}</p>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5><i class="fas fa-ruler-combined text-primary"></i> Покрытие</h5>
+                            <p>{{ court.get_surface_display }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5><i class="fas fa-hashtag text-primary"></i> Количество площадок</h5>
+                            <p>{{ court.courts_count }}</p>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5><i class="fas fa-clock text-primary"></i> Время работы</h5>
+                            <p>{{ court.opening_time|time:"H:i" }} - {{ court.closing_time|time:"H:i" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5><i class="fas fa-calendar-day text-primary"></i> Дни работы</h5>
+                            <p>{{ court.working_days }}</p>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5><i class="fas fa-tag text-primary"></i> Цена</h5>
+                            <p class="price-display">
+                                {% if court.is_free %}
+                                    Бесплатно
+                                {% else %}
+                                    ₽{{ court.price_per_hour }}/час
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5><i class="fas fa-info-circle text-primary"></i> Статус</h5>
+                            <p>
+                                {% if court.is_active %}
+                                    <span class="badge bg-success">Активна</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Неактивна</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+
+                    <h4 class="section-title"><i class="fas fa-concierge-bell"></i> Удобства</h4>
+                    <div class="amenities-list">
+                        {% if court.is_lighted %}
+                            <span class="amenity-item"><i class="fas fa-lightbulb"></i> Освещение</span>
+                        {% endif %}
+                        {% if court.has_parking %}
+                            <span class="amenity-item"><i class="fas fa-car"></i> Парковка</span>
+                        {% endif %}
+                        {% if court.has_showers %}
+                            <span class="amenity-item"><i class="fas fa-shower"></i> Душ</span>
+                        {% endif %}
+                        {% if court.has_locker_rooms %}
+                            <span class="amenity-item"><i class="fas fa-tshirt"></i> Раздевалки</span>
+                        {% endif %}
+                        {% if court.has_equipment_rental %}
+                            <span class="amenity-item"><i class="fas fa-volleyball-ball"></i> Прокат инвентаря</span>
+                        {% endif %}
+                        {% if court.has_cafe %}
+                            <span class="amenity-item"><i class="fas fa-utensils"></i> Кафе</span>
+                        {% endif %}
+                    </div>
+
+                    <h4 class="section-title"><i class="fas fa-align-left"></i> Описание</h4>
+                    <p>{{ court.description|linebreaks }}</p>
+
+                    {% if court.price_details %}
+                        <h4 class="section-title"><i class="fas fa-money-bill-wave"></i> Детали оплаты</h4>
+                        <p>{{ court.price_details|linebreaks }}</p>
+                    {% endif %}
+
+                    {% if court.phone %}
+                        <h4 class="section-title"><i class="fas fa-phone"></i> Телефон</h4>
+                        <p>{{ court.phone }}</p>
+                    {% endif %}
+
+                    {% if court.email %}
+                        <h4 class="section-title"><i class="fas fa-envelope"></i> Email</h4>
+                        <p>{{ court.email }}</p>
+                    {% endif %}
+
+                    {% if court.website %}
+                        <h4 class="section-title"><i class="fas fa-globe"></i> Сайт</h4>
+                        <p><a href="{{ court.website }}" target="_blank">{{ court.website }}</a></p>
+                    {% endif %}
+
+                    <div class="mt-4">
+                        <a href="{% url 'create_game' %}?court={{ court.id }}" class="btn booking-btn">
+                            <i class="fas fa-calendar-check"></i> Создать игру на этой площадке
+                        </a>
+                    </div>
+
+                    <!-- Отзывы -->
+                    <div class="review-section">
+                        <h4 class="section-title"><i class="fas fa-star"></i> Отзывы ({{ reviews_count }})</h4>
+
+                        {% if reviews %}
+                            {% for review in reviews %}
+                                <div class="review-card">
+                                    <div class="d-flex justify-content-between">
+                                        <h6>{{ review.title }}</h6>
+                                        <div class="rating-stars">
+                                            {% for i in "12345" %}
+                                                {% if i|add:0 <= review.rating_overall|add:0 %}
+                                                    <i class="fas fa-star"></i>
+                                                {% else %}
+                                                    <i class="far fa-star"></i>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    <p>{{ review.comment|linebreaks }}</p>
+                                    <small class="text-muted">Автор: {{ review.user.username }} | {{ review.created_at|date:"d.m.Y" }}</small>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted">Отзывов пока нет. Будьте первым!</p>
+                        {% endif %}
+
+                        {% if can_review %}
+                            <a href="#" class="btn btn-outline-primary disabled">
+                                <i class="fas fa-plus"></i> Оставить отзыв
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <h4><i class="fas fa-map-marked-alt"></i> Местоположение</h4>
+                    <div id="court-map" class="map-container"></div>
+
+                    {% if photos %}
+                        <h4 class="section-title"><i class="fas fa-images"></i> Фотографии</h4>
+                        <div class="photo-gallery">
+                            {% for photo in photos %}
+                                <div class="photo-item">
+                                    {% if photo.photo %}
+                                        <img src="{{ photo.photo.url }}" alt="Фото площадки" class="img-fluid">
+                                    {% else %}
+                                        <i class="fas fa-image fa-3x text-muted"></i>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    {% if court.suggested_by %}
+                        <h4 class="section-title"><i class="fas fa-user"></i> Предложена</h4>
+                        <p>
+                            {% if court.suggested_by.get_full_name %}
+                                {{ court.suggested_by.get_full_name }}
+                            {% else %}
+                                {{ court.suggested_by.username }}
+                            {% endif %}
+                        </p>
+                    {% endif %}
+
+                    {% if court.reviewed_by %}
+                        <h4 class="section-title"><i class="fas fa-user-check"></i> Проверена</h4>
+                        <p>
+                            {% if court.reviewed_by.get_full_name %}
+                                {{ court.reviewed_by.get_full_name }}
+                            {% else %}
+                                {{ court.reviewed_by.username }}
+                            {% endif %}
+                        </p>
+                    {% endif %}
+
+                    {% if court.moderator_comment %}
+                        <h4 class="section-title"><i class="fas fa-comment"></i> Комментарий модератора</h4>
+                        <p>{{ court.moderator_comment }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Yandex.Maps API -->
+    <script src="https://api-maps.yandex.ru/2.1/?apikey=131116f7-f47e-4295-b369-53b193e0ce23&lang=ru_RU"></script>
+    <script>
+        ymaps.ready(function() {
+            // Проверяем, есть ли координаты
+            {% if court.latitude and court.longitude %}
+                var myMap = new ymaps.Map('court-map', {
+                    center: [{{ court.latitude }}, {{ court.longitude }}],
+                    zoom: 15
+                });
+
+                var placemark = new ymaps.Placemark(
+                    [{{ court.latitude }}, {{ court.longitude }}],
+                    {
+                        hintContent: '{{ court.name }}',
+                        balloonContent: '<strong>{{ court.name }}</strong><br>{{ court.address }}'
+                    },
+                    {
+                        preset: 'islands#blueSportIcon'
+                    }
+                );
+
+                myMap.geoObjects.add(placemark);
+            {% else %}
+                document.getElementById('court-map').innerHTML = '<div class="d-flex align-items-center justify-content-center h-100"><p class="text-muted">Координаты не указаны</p></div>';
+            {% endif %}
+        });
+    </script>
+
+    <div class="container mt-4">
+        <div class="text-center">
+            <a href="{% url 'home' %}" class="btn btn-primary">
+                <i class="fas fa-home"></i> На главную
+            </a>
+        </div>
+    </div>
+</body>
+</html>

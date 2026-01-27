@@ -3,1097 +3,523 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Карта волейбольных площадок Москвы | Волейбольное сообщество</title>
-    <!-- Bootstrap 5 -->
+    <title>Карта волейбольных площадок | Волейбольное сообщество</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root {
-            --primary-color: #4e54c8;
-            --secondary-color: #8f94fb;
-            --success-color: #28a745;
-            --indoor-color: #3498db;
-            --outdoor-color: #2ecc71;
-            --beach-color: #f39c12;
-            --user-location-color: #ff4757;
-        }
         body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            overflow-x: hidden;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
         }
-        #map {
-            position: fixed;
-            top: 0;
-            left: 0;
+
+        .map-container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
             width: 100%;
-            height: 100vh;
-            z-index: 1;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
         }
-        .sidebar {
-            position: fixed;
-            top: 0;
-            right: 0;
-            width: 400px;
-            height: 100vh;
-            background: rgba(255, 255, 255, 0.98);
-            z-index: 1000;
-            box-shadow: -5px 0 25px rgba(0, 0, 0, 0.15);
-            transform: translateX(400px);
-            transition: transform 0.3s ease;
-            overflow-y: auto;
-            padding: 20px;
+
+        .map-header {
+            text-align: center;
+            margin-bottom: 2rem;
         }
-        .sidebar.active {
-            transform: translateX(0);
+
+        .map-header h1 {
+            color: #4f46e5;
+            font-weight: 700;
         }
-        .toggle-sidebar {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1001;
-            background: white;
-            border: none;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            color: var(--primary-color);
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        .toggle-sidebar:hover {
-            transform: scale(1.1);
-        }
-        .controls {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            z-index: 1000;
-            background: white;
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
-            width: 320px;
-        }
-        /* Модальное окно информации о площадке */
-        #courtInfoModal .modal-dialog {
-            max-width: 800px;
-        }
-        .court-info-header {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            padding: 20px;
-            border-radius: 10px 10px 0 0;
-        }
-        .court-info-body {
-            padding: 20px;
-            max-height: 70vh;
-            overflow-y: auto;
-        }
-        .games-list {
+
+        #map {
+            height: 600px;
+            width: 100%;
+            border-radius: 10px;
             margin-top: 20px;
         }
-        .game-card {
-            border: 1px solid #e0e0e0;
-            border-radius: 10px;
+
+        .court-info {
+            background-color: #f8f9fa;
             padding: 15px;
-            margin-bottom: 15px;
-            transition: all 0.3s;
+            border-radius: 10px;
+            margin-top: 20px;
         }
-        .game-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-        .game-date {
-            font-weight: bold;
-            color: var(--primary-color);
-        }
-        .game-time {
-            background: #f8f9fa;
-            padding: 5px 10px;
-            border-radius: 5px;
-            display: inline-block;
-        }
-        .game-status {
-            padding: 3px 10px;
-            border-radius: 15px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-        .game-status.upcoming {
-            background: #d4edda;
-            color: #155724;
-        }
-        .game-status.ongoing {
-            background: #fff3cd;
-            color: #856404;
-        }
-        .game-status.completed {
-            background: #f8d7da;
-            color: #721c24;
-        }
-        .game-participants {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-top: 10px;
-        }
-        .participant-avatar {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            background: var(--primary-color);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.8rem;
-        }
-        .no-games {
-            text-align: center;
-            padding: 40px;
-            color: #6c757d;
-        }
-        .no-games i {
-            font-size: 3rem;
-            margin-bottom: 15px;
-        }
-        /* Анимации для меток */
-        @keyframes pulse {
-            0% {
-                transform: scale(1);
-                opacity: 1;
-            }
-            50% {
-                transform: scale(1.2);
-                opacity: 0.8;
-            }
-            100% {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
-        .court-type-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            margin-right: 8px;
-        }
-        .court-type-badge.indoor {
-            background: #d6eaf8;
-            color: #21618c;
-            border: 1px solid #aed6f1;
-        }
-        .court-type-badge.outdoor {
-            background: #d5f4e6;
-            color: #186a3b;
-            border: 1px solid #abebc6;
-        }
-        .court-type-badge.beach {
-            background: #fdebd0;
-            color: #9c6400;
-            border: 1px solid #f8c471;
-        }
-        .price-badge {
-            background: #f8f9fa;
+
+        .court-card {
             border: 1px solid #dee2e6;
             border-radius: 10px;
-            padding: 5px 12px;
-            font-size: 0.9rem;
-        }
-        .price-badge.free {
-            background: #d4edda;
-            color: #155724;
-            border-color: #c3e6cb;
-        }
-        .filter-checkbox {
-            margin-right: 8px;
-        }
-        .stats-card {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            border-radius: 12px;
             padding: 15px;
-            margin-bottom: 15px;
-            text-align: center;
-            box-shadow: 0 4px 12px rgba(78, 84, 200, 0.2);
+            margin-bottom: 10px;
+            transition: box-shadow 0.3s;
         }
-        .stats-number {
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 5px;
+
+        .court-card:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
-        .stats-label {
-            font-size: 0.9rem;
-            opacity: 0.9;
-        }
-        .moscow-courts-card {
-            background: linear-gradient(135deg, #ff6b35, #ff8e53);
+
+        .court-type-badge {
+            font-size: 0.8em;
+            padding: 5px 10px;
+            border-radius: 20px;
             color: white;
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 15px;
-            text-align: center;
-            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.2);
         }
-        @media (max-width: 768px) {
-            .sidebar {
-                width: 100%;
-                transform: translateX(100%);
-            }
-            .controls {
-                width: calc(100% - 40px);
-            }
+
+        .indoor { background-color: #4f46e5; }
+        .outdoor { background-color: #10b981; }
+        .beach { background-color: #f59e0b; }
+
+        .court-status-badge {
+            font-size: 0.8em;
+            padding: 5px 10px;
+            border-radius: 20px;
+            color: white;
         }
+
+        .approved { background-color: #10b981; }
+        .pending { background-color: #f59e0b; }
+        .rejected { background-color: #ef4444; }
+
         .amenities-list {
             display: flex;
             flex-wrap: wrap;
-            gap: 5px;
-            margin: 10px 0;
+            gap: 10px;
+            margin-top: 10px;
         }
-        .amenity-badge {
-            background: #e9ecef;
-            padding: 4px 10px;
+
+        .amenity-item {
+            background-color: #e0e7ff;
+            color: #4f46e5;
+            padding: 5px 10px;
             border-radius: 20px;
-            font-size: 0.8rem;
-            color: #495057;
+            font-size: 0.8em;
         }
-        .amenity-badge.available {
-            background: #d1ecf1;
-            color: #0c5460;
-        }
-        .court-card {
-            background: white;
-            border-radius: 12px;
+
+        .filters-section {
+            background-color: #f8f9fa;
             padding: 20px;
-            margin-bottom: 15px;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
-            border-left: 5px solid var(--primary-color);
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        .court-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-        }
-        .court-card.indoor {
-            border-left-color: var(--indoor-color);
-        }
-        .court-card.outdoor {
-            border-left-color: var(--outdoor-color);
-        }
-        .court-card.beach {
-            border-left-color: var(--beach-color);
-        }
-        .filter-group {
-            background: #f8f9fa;
-            padding: 12px;
             border-radius: 10px;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
-        .legend {
-            background: white;
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 15px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-        .legend-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 8px;
-            font-size: 0.9rem;
-        }
-        .legend-color {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            margin-right: 10px;
-            border: 2px solid white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-        .moscow-title {
-            font-weight: 700;
-            color: #ff6b35;
-            background: rgba(255, 107, 53, 0.1);
-            padding: 2px 8px;
-            border-radius: 4px;
-        }
-        /* Кнопка просмотра игр */
-        .view-games-btn {
-            width: 100%;
-            margin-top: 15px;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            border: none;
-            color: white;
-            padding: 10px;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-        .view-games-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(78, 84, 200, 0.4);
-        }
-        /* Кнопка "Игры и запись" */
-        .games-btn {
-            background: linear-gradient(135deg, #ff6b35, #ff8e53);
-            border: none;
-            color: white;
-            padding: 8px 15px;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: all 0.3s;
-            text-decoration: none;
-            display: inline-block;
-            text-align: center;
-        }
-        .games-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
-            color: white;
-        }
-        /* Стили для балуна Яндекс Карт */
-        .ymaps-2-1-79-balloon {
-            box-shadow: 0 5px 20px rgba(0,0,0,0.15) !important;
-            border-radius: 12px !important;
-            overflow: hidden !important;
-        }
-        .ymaps-2-1-79-balloon__content {
-            margin: 0 !important;
-            padding: 15px !important;
-        }
-        .ymaps-2-1-79-balloon__close-button {
-            background: var(--primary-color) !important;
-            border-radius: 50% !important;
-            width: 24px !important;
-            height: 24px !important;
+
+        .court-count {
+            font-weight: bold;
+            color: #4f46e5;
+            font-size: 1.2em;
         }
     </style>
 </head>
 <body>
-    <!-- Яндекс Карта -->
-    <div id="map"></div>
-    <!-- Кнопка открытия/закрытия сайдбара -->
-    <button class="toggle-sidebar" id="toggleSidebar">
-        <i class="fas fa-bars"></i>
-    </button>
-    <!-- Панель управления -->
-    <div class="controls">
-        <h5 class="mb-3 d-flex align-items-center">
-            <i class="fas fa-filter me-2"></i>Фильтры площадок
-            <span class="moscow-title ms-auto">МОСКВА</span>
-        </h5>
-        <div class="filter-group">
-            <div class="form-check">
-                <input class="form-check-input filter-checkbox" type="checkbox" id="filterIndoor" checked>
-                <label class="form-check-label" for="filterIndoor">
-                    <i class="fas fa-home text-primary me-1"></i> Закрытые залы
-                </label>
-            </div>
-            <div class="form-check">
-                <input class="form-check-input filter-checkbox" type="checkbox" id="filterOutdoor" checked>
-                <label class="form-check-label" for="filterOutdoor">
-                    <i class="fas fa-sun text-success me-1"></i> Открытые площадки
-                </label>
-            </div>
-            <div class="form-check">
-                <input class="form-check-input filter-checkbox" type="checkbox" id="filterBeach" checked>
-                <label class="form-check-label" for="filterBeach">
-                    <i class="fas fa-umbrella-beach text-warning me-1"></i> Пляжные площадки
-                </label>
-            </div>
-        </div>
-        <div class="filter-group">
-            <div class="form-check">
-                <input class="form-check-input filter-checkbox" type="checkbox" id="filterFree">
-                <label class="form-check-label" for="filterFree">
-                    <i class="fas fa-money-bill-wave text-success me-1"></i> Только бесплатные
-                </label>
-            </div>
-            <div class="form-check">
-                <input class="form-check-input filter-checkbox" type="checkbox" id="filterLighted">
-                <label class="form-check-label" for="filterLighted">
-                    <i class="fas fa-lightbulb text-warning me-1"></i> С освещением
-                </label>
-            </div>
-            <div class="form-check">
-                <input class="form-check-input filter-checkbox" type="checkbox" id="filterPopular">
-                <label class="form-check-label" for="filterPopular">
-                    <i class="fas fa-fire text-danger me-1"></i> Только популярные
-                </label>
-            </div>
-        </div>
-        <div class="d-grid gap-2">
-            <button class="btn btn-primary" id="locateMe">
-                <i class="fas fa-location-arrow me-2"></i>Моё местоположение
-            </button>
-            <button class="btn btn-info" id="highlightAll">
-                <i class="fas fa-star me-2"></i>Подсветить все
-            </button>
-            <button class="btn btn-warning" id="showUpcomingGames">
-                <i class="fas fa-calendar me-2"></i>Ближайшие игры
-            </button>
-            
-            <!-- Кнопка "Не нашёл площадку?" -->
-            <a href="https://forms.yandex.ru/u/696b7df6e010db493c4258d6" 
-            target="_blank" 
-            class="btn btn-outline-secondary text-center">
-                <i class="fas fa-map-marker-alt me-2"></i>Не нашёл свою площадку?
-            </a>
-            
-            <!-- КНОПКА "НА ГЛАВНУЮ" -->
-            <a href="/" class="btn btn-outline-dark text-center">
-                <i class="fas fa-home me-2"></i>На главную
-            </a>
-        </div>
-        <!-- Статистика -->
-        <div class="mt-3">
-            <div class="moscow-courts-card">
-                <div class="stats-number" id="moscowCourts">257</div>
-                <div class="stats-label">Площадок в Москве</div>
-            </div>
-            <div class="row g-2">
-                <div class="col-6">
-                    <div class="stats-card">
-                        <div class="stats-number" id="visibleCourts">0</div>
-                        <div class="stats-label">Показано на карте</div>
-                    </div>
-                </div>
-                <div class="col-6">
-                    <div class="stats-card" style="background: linear-gradient(135deg, #ff6b35, #ff8e53);">
-                        <div class="stats-number" id="freeCourtsCount">0</div>
-                        <div class="stats-label">Бесплатных</div>
-                    </div>
+    <div class="container">
+        <div class="map-container">
+            <div class="map-header">
+                <h1><i class="fas fa-map-marked-alt"></i> Карта волейбольных площадок</h1>
+                <p class="text-muted">Все волейбольные площадки в городе</p>
+                <div class="court-count">
+                    Всего площадок: <span id="total-courts">0</span>
                 </div>
             </div>
-        </div>
-        <!-- Легенда -->
-        <div class="legend">
-            <h6 class="mb-3"><i class="fas fa-key me-2"></i>Легенда:</h6>
-            <div class="legend-item">
-                <div class="legend-color" style="background-color: var(--indoor-color);"></div>
-                <span>Закрытые залы</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background-color: var(--outdoor-color);"></div>
-                <span>Открытые площадки</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background-color: var(--beach-color);"></div>
-                <span>Пляжные площадки</span>
-            </div>
-        </div>
-    </div>
-    <!-- Сайдбар со списком площадок -->
-    <div class="sidebar" id="sidebar">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4>
-                <i class="fas fa-list me-2"></i>Площадки Москвы
-            </h4>
-            <button class="btn btn-sm btn-outline-secondary" id="closeSidebar">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div class="input-group mb-4">
-            <input type="text" class="form-control" placeholder="Поиск площадок по названию..." id="searchCourts">
-            <button class="btn btn-outline-primary" type="button" id="searchButton">
-                <i class="fas fa-search"></i>
-            </button>
-        </div>
-        <div id="courtsList">
-            <div class="text-center py-5 text-muted">
-                <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
-                <p>Загрузка площадок Москвы...</p>
-            </div>
-        </div>
-    </div>
-    <!-- Модальное окно информации о площадке -->
-    <div class="modal fade" id="courtInfoModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header court-info-header">
-                    <h5 class="modal-title" id="courtModalTitle">Информация о площадке</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body court-info-body" id="courtModalBody">
-                    <!-- Контент будет загружен динамически -->
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
-                    <!-- КНОПКА "ПЕРЕЙТИ К ПЛОЩАДКЕ" УДАЛЕНА -->
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- Подключение Яндекс Карт -->
-    <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU&apikey=40432482-362a-4836-a50b-75120889438e" type="text/javascript"></script>
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Все волейбольные площадки Москвы (257 площадок)
-        const moscowVolleyballCourts = [
-            {
-                id: 1,
-                name: 'Парк Горького (центральная площадка)',
-                address: 'Крымский Вал, 9',
-                district: 'ЦАО',
-                latitude: 55.7289,
-                longitude: 37.6019,
-                court_type: 'outdoor',
-                price_per_hour: 0,
-                is_free: true,
-                is_lighted: true,
-                popularity: 95,
-                description: 'Центральная волейбольная площадка в Парке Горького. Отличное покрытие, сетки всегда в хорошем состоянии. Идеальное место для вечерних игр.',
-                rating: 4.8,
-                capacity: 20,
-                phone: '+7 (495) 123-45-67',
-                email: 'parkgorkogo@volleyball.ru',
-                website: 'www.parkgorkogo.ru',
-                working_hours: '08:00 - 22:00',
-                metro: [
-                    { line: 'red', name: 'Парк культуры', number: '1' },
-                    { line: 'orange', name: 'Октябрьская', number: '6' }
-                ],
-                amenities: ['Душевые рядом', 'Кафе в 5 минутах', 'Платная парковка', 'Освещение', 'Бесплатно', 'Раздевалки']
-            },
-            // ... остальные площадки (оставлены без изменений)
-        ];
-        // Добавляем еще площадки
-        for (let i = 6; i <= 257; i++) {
-            const districts = ['ЦАО', 'САО', 'ЮАО', 'ВАО', 'ЗАО', 'СВАО', 'ЮЗАО'];
-            const district = districts[Math.floor(Math.random() * districts.length)];
-            const lat = 55.65 + Math.random() * 0.3;
-            const lng = 37.35 + Math.random() * 0.7;
-            const courtTypes = ['indoor', 'outdoor', 'beach'];
-            const courtType = courtTypes[Math.floor(Math.random() * courtTypes.length)];
-            const isFree = Math.random() > 0.7;
-            const price = isFree ? 0 : [300, 500, 700, 1000, 1500, 2000][Math.floor(Math.random() * 6)];
-            const popularity = Math.floor(30 + Math.random() * 70);
-            const names = [
-                'Волейбольный центр',
-                'Спорткомплекс',
-                'Парк спорта',
-                'Академия волейбола',
-                'Спортплощадка',
-                'Волейбол-арена',
-                'Спортзал'
-            ];
-            moscowVolleyballCourts.push({
-                id: i,
-                name: `${names[Math.floor(Math.random() * names.length)]} №${i}`,
-                address: `Москва, ${district}`,
-                district: district,
-                latitude: lat,
-                longitude: lng,
-                court_type: courtType,
-                price_per_hour: price,
-                is_free: isFree,
-                is_lighted: Math.random() > 0.3,
-                popularity: popularity,
-                description: `Волейбольная площадка в ${district} округе. ${isFree ? 'Бесплатный доступ' : `Аренда ${price}₽/час`}.`,
-                rating: 3.5 + Math.random() * 1.5,
-                capacity: [12, 14, 16, 18, 20, 24, 30][Math.floor(Math.random() * 7)],
-                phone: '+7 (495) ' + Math.floor(1000000 + Math.random() * 9000000),
-                working_hours: '09:00 - 21:00',
-                metro: [],
-                amenities: []
-            });
-        }
-        // Мокковые данные для игр на площадках
-        const mockGames = [
-            // ... данные об играх (оставлены без изменений)
-        ];
-        // Добавляем еще игр
-        for (let i = 7; i <= 50; i++) {
-            const courtId = Math.floor(Math.random() * 50) + 1;
-            const statuses = ['upcoming', 'ongoing', 'completed'];
-            const status = statuses[Math.floor(Math.random() * statuses.length)];
-            const date = new Date();
-            date.setDate(date.getDate() + Math.floor(Math.random() * 30));
-            mockGames.push({
-                id: i,
-                court_id: courtId,
-                title: `Игра №${i}`,
-                date: date.toISOString().split('T')[0],
-                time: `${Math.floor(Math.random() * 12) + 10}:00 - ${Math.floor(Math.random() * 12) + 14}:00`,
-                status: status,
-                participants: Math.floor(Math.random() * 20) + 5,
-                max_participants: Math.floor(Math.random() * 30) + 10,
-                organizer: 'Организатор ' + Math.floor(Math.random() * 100),
-                price: Math.floor(Math.random() * 1000),
-                skill_level: ['Начинающий', 'Средний', 'Профессиональный'][Math.floor(Math.random() * 3)],
-                description: 'Интересная игра в волейбол'
-            });
-        }
 
-        let map;
-        let courts = [];
-        let placemarks = [];
-        let userPlacemark = null;
-        let currentCourtId = null;
-
-        // Функция создания SVG иконки для метки
-        function createSvgIcon(color) {
-            return `image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
-                <circle cx="20" cy="20" r="18" fill="${color}" stroke="white" stroke-width="2"/>
-                <text x="20" y="25" font-family="FontAwesome" font-size="18" fill="white" text-anchor="middle"></text>
-            </svg>`;
-        }
-
-        // Инициализация Яндекс Карт
-        ymaps.ready(init);
-
-        function init() {
-            map = new ymaps.Map('map', {
-                center: [55.7558, 37.6173],
-                zoom: 11,
-                controls: ['zoomControl', 'fullscreenControl']
-            });
-            loadCourts();
-            setupEventListeners();
-            updateStats();
-        }
-
-        function loadCourts() {
-            courts = [...moscowVolleyballCourts];
-            updateMap();
-        }
-
-        function updateMap() {
-            placemarks.forEach(pm => map.geoObjects.remove(pm));
-            placemarks = [];
-            const filters = getActiveFilters();
-            const filteredCourts = courts.filter(court => applyFilters(court, filters));
-            filteredCourts.forEach(court => {
-                const placemark = createPlacemark(court);
-                placemarks.push(placemark);
-                map.geoObjects.add(placemark);
-            });
-            updateCourtsList(filteredCourts);
-            updateStats();
-            document.getElementById('visibleCourts').textContent = filteredCourts.length;
-        }
-
-        function getCourtColor(court) {
-            switch(court.court_type) {
-                case 'indoor': return '#3498db';
-                case 'outdoor': return '#2ecc71';
-                case 'beach': return '#f39c12';
-                default: return '#4e54c8';
-            }
-        }
-
-        function createPlacemark(court) {
-            const iconColor = getCourtColor(court);
-            const placemark = new ymaps.Placemark(
-                [court.latitude, court.longitude],
-                {
-                    balloonContentHeader: `<h5 class="mb-2">${court.name}</h5>`,
-                    balloonContentBody: createBalloonContent(court),
-                    hintContent: court.name
-                },
-                {
-                    iconLayout: 'default#image',
-                    iconImageHref: createSvgIcon(iconColor),
-                    iconImageSize: [40, 40],
-                    iconImageOffset: [-20, -20],
-                    hasBalloon: true,
-                    openBalloonOnClick: true,
-                    hideIconOnBalloonOpen: false,
-                    balloonOffset: [0, -20]
-                }
-            );
-            placemark.originalIcon = createSvgIcon(iconColor);
-            placemark.courtId = court.id;
-            placemark.events.add('click', function(e) {
-                e.preventDefault();
-                currentCourtId = court.id;
-                highlightPlacemark(placemark, '#ffd700', 2000);
-                showCourtInfoModal(court.id);
-            });
-            return placemark;
-        }
-
-        function highlightPlacemark(placemark, color, duration = 2000) {
-            if (!placemark.originalIcon) {
-                placemark.originalIcon = placemark.options.get('iconImageHref');
-            }
-            placemark.options.set('iconImageHref', createSvgIcon(color));
-            setTimeout(() => {
-                placemark.options.set('iconImageHref', placemark.originalIcon);
-            }, duration);
-        }
-
-        function highlightAllPlacemarks(color, duration = 2000) {
-            placemarks.forEach(pm => highlightPlacemark(pm, color, duration));
-        }
-
-        function highlightPlacemarksWithGames(color, duration = 3000) {
-            const courtsWithGames = courts.filter(court => {
-                const courtGames = mockGames.filter(game => 
-                    game.court_id == court.id && game.status === 'upcoming'
-                );
-                return courtGames.length > 0;
-            });
-            courtsWithGames.forEach(court => {
-                const placemark = placemarks.find(pm => {
-                    const coords = pm.geometry.getCoordinates();
-                    return coords[0] === court.latitude && coords[1] === court.longitude;
-                });
-                if (placemark) {
-                    highlightPlacemark(placemark, color, duration);
-                }
-            });
-            return courtsWithGames.length;
-        }
-
-        function createUserPlacemark(lat, lng) {
-            return new ymaps.Placemark(
-                [lat, lng],
-                {
-                    balloonContent: 'Ваше местоположение',
-                    hintContent: 'Вы здесь'
-                },
-                {
-                    iconLayout: 'default#image',
-                    iconImageHref: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
-                    iconImageSize: [32, 32],
-                    iconImageOffset: [-16, -16],
-                    hasBalloon: true,
-                    zIndex: 2000
-                }
-            );
-        }
-
-        function createBalloonContent(court) {
-            const typeLabels = {
-                'indoor': 'Закрытый зал',
-                'outdoor': 'Открытая площадка',
-                'beach': 'Пляжная площадка'
-            };
-            return `
-                <div style="max-width: 300px; padding: 10px;">
-                    <p><strong><i class="fas fa-map-marker-alt me-2"></i>Адрес:</strong> ${court.address}</p>
-                    <p><strong><i class="fas fa-compass me-2"></i>Округ:</strong> ${court.district}</p>
-                    <p><strong><i class="fas fa-volleyball-ball me-2"></i>Тип:</strong> ${typeLabels[court.court_type]}</p>
-                    <p><strong><i class="fas fa-money-bill-wave me-2"></i>Стоимость:</strong> ${court.is_free ? 'Бесплатно' : court.price_per_hour + '₽/час'}</p>
-                    <p><strong><i class="fas fa-star me-2"></i>Рейтинг:</strong> ${court.rating.toFixed(1)}/5.0</p>
-                    <p><strong><i class="fas fa-fire me-2"></i>Популярность:</strong> ${court.popularity}%</p>
-                    <div class="d-flex gap-2 mt-3">
-                        <button class="btn btn-sm btn-primary flex-grow-1" onclick="showCourtInfoModal(${court.id})">
-                            <i class="fas fa-info-circle me-1"></i>Подробнее
-                        </button>
-                        <button class="btn btn-sm btn-warning flex-grow-1 games-btn" onclick="event.stopPropagation(); showCourtInfoModal(${court.id})">
-                            <i class="fas fa-volleyball-ball me-1"></i>Игры и запись
-                        </button>
-                    </div>
-                </div>
-            `;
-        }
-
-        function showCourtInfoModal(courtId) {
-            const court = courts.find(c => c.id == courtId);
-            if (!court) return;
-            currentCourtId = courtId;
-            const courtGames = mockGames.filter(game => game.court_id == courtId);
-            const gamesByDate = {};
-            courtGames.forEach(game => {
-                if (!gamesByDate[game.date]) gamesByDate[game.date] = [];
-                gamesByDate[game.date].push(game);
-            });
-            const sortedDates = Object.keys(gamesByDate).sort();
-            let gamesHTML = '';
-            if (courtGames.length > 0) {
-                sortedDates.forEach(date => {
-                    const formattedDate = new Date(date).toLocaleDateString('ru-RU', {
-                        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-                    });
-                    gamesHTML += `
-                        <div class="mb-4">
-                            <h6 class="mb-3 border-bottom pb-2">
-                                <i class="fas fa-calendar-day me-2"></i>${formattedDate}
-                            </h6>
-                            ${gamesByDate[date].map(game => createGameCard(game)).join('')}
-                        </div>
-                    `;
-                });
-            } else {
-                gamesHTML = `
-                    <div class="no-games">
-                        <i class="fas fa-calendar-times"></i>
-                        <h5>Нет запланированных игр</h5>
-                        <p>Будьте первым, кто создаст игру на этой площадке!</p>
-                        <button class="btn btn-primary mt-3" onclick="event.stopPropagation(); createGame(${courtId})">
-                            <i class="fas fa-plus me-2"></i>Создать игру
-                        </button>
-                    </div>
-                `;
-            }
-            const typeLabels = {
-                'indoor': 'Закрытый зал',
-                'outdoor': 'Открытая площадка',
-                'beach': 'Пляжная площадка'
-            };
-            const courtInfoHTML = `
+            <div class="filters-section">
                 <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-4">
-                            <h6><i class="fas fa-info-circle me-2"></i>Основная информация</h6>
-                            <ul class="list-unstyled">
-                                <li class="mb-2"><strong>Адрес:</strong> ${court.address}</li>
-                                <li class="mb-2"><strong>Округ:</strong> ${court.district}</li>
-                                <li class="mb-2"><strong>Тип:</strong> ${typeLabels[court.court_type]}</li>
-                                <li class="mb-2"><strong>Стоимость:</strong> ${court.is_free ? 'Бесплатно' : court.price_per_hour + '₽/час'}</li>
-                                <li class="mb-2"><strong>Рейтинг:</strong> ${court.rating.toFixed(1)}/5.0</li>
-                                <li class="mb-2"><strong>Популярность:</strong> ${court.popularity}%</li>
-                                <li class="mb-2"><strong>Вместимость:</strong> до ${court.capacity} человек</li>
-                                ${court.working_hours ? `<li class="mb-2"><strong>Часы работы:</strong> ${court.working_hours}</li>` : ''}
-                                ${court.phone ? `<li class="mb-2"><strong>Телефон:</strong> ${court.phone}</li>` : ''}
-                            </ul>
-                        </div>
-                        ${court.description ? `<div class="mb-4"><h6><i class="fas fa-align-left me-2"></i>Описание</h6><p>${court.description}</p></div>` : ''}
-                        ${court.amenities && court.amenities.length > 0 ? `
-                            <div class="mb-4">
-                                <h6><i class="fas fa-list-check me-2"></i>Удобства</h6>
-                                <div class="amenities-list">
-                                    ${court.amenities.map(amenity => `<span class="amenity-badge available">${amenity}</span>`).join('')}
-                                </div>
-                            </div>
-                        ` : ''}
+                    <div class="col-md-3">
+                        <label for="court-type-filter" class="form-label">Тип площадки</label>
+                        <select class="form-select" id="court-type-filter">
+                            <option value="">Все типы</option>
+                            <option value="indoor">Крытая</option>
+                            <option value="outdoor">Открытая</option>
+                            <option value="beach">Пляжная</option>
+                        </select>
                     </div>
-                    <div class="col-md-6">
-                        <div class="games-list">
-                            <h5 class="mb-4">
-                                <i class="fas fa-volleyball-ball me-2"></i>Игры на площадке
-                                <span class="badge bg-primary ms-2">${courtGames.length}</span>
-                            </h5>
-                            ${gamesHTML}
-                        </div>
+                    <div class="col-md-3">
+                        <label for="surface-filter" class="form-label">Покрытие</label>
+                        <select class="form-select" id="surface-filter">
+                            <option value="">Все покрытия</option>
+                            <option value="sand">Песок</option>
+                            <option value="parquet">Паркет</option>
+                            <option value="synthetic">Синтетика</option>
+                            <option value="asphalt">Асфальт</option>
+                            <option value="grass">Газон</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="free-filter" class="form-label">Только бесплатные</label>
+                        <select class="form-select" id="free-filter">
+                            <option value="">Все</option>
+                            <option value="true">Да</option>
+                            <option value="false">Нет</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="lighting-filter" class="form-label">С освещением</label>
+                        <select class="form-select" id="lighting-filter">
+                            <option value="">Все</option>
+                            <option value="true">Да</option>
+                            <option value="false">Нет</option>
+                        </select>
                     </div>
                 </div>
-            `;
-            document.getElementById('courtModalTitle').textContent = court.name;
-            document.getElementById('courtModalBody').innerHTML = courtInfoHTML;
-            const modal = new bootstrap.Modal(document.getElementById('courtInfoModal'));
-            modal.show();
+            </div>
+
+            <div id="map"></div>
+
+            <div class="court-info mt-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3><i class="fas fa-list"></i> Список площадок</h3>
+                    <div class="input-group" style="max-width: 300px;">
+                        <input type="text" class="form-control" id="court-search-input" placeholder="Поиск по названию или адресу...">
+                        <button class="btn btn-outline-secondary" type="button" id="court-search-button">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="courts-list">
+                    <!-- Список площадок будет загружен через JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Yandex.Maps API -->
+    <script src="https://api-maps.yandex.ru/2.1/?apikey=131116f7-f47e-4295-b369-53b193e0ce23&lang=ru_RU"></script>
+    <script>
+        let myMap;
+        let allCourts = [];
+        let placemarks = [];
+
+        // Инициализация карты
+        ymaps.ready(initMap);
+
+        async function initMap() {
+            // Создание карты
+            myMap = new ymaps.Map('map', {
+                center: [55.7558, 37.6173], // Москва по умолчанию
+                zoom: 10
+            });
+
+            // Загружаем данные о площадках
+            await loadCourts();
         }
 
-        function createGame() {
-            alert('Функция создания игры будет доступна в следующей версии приложения!');
-        }
+        async function loadCourts() {
+            try {
+                // Загружаем данные о площадках через API
+                const response = await fetch('{% url "courts_api" %}');
+                allCourts = await response.json();
 
-        function createGameCard(game) {
-            let statusClass = '', statusText = '';
-            if (game.status === 'upcoming') {
-                statusClass = 'upcoming'; statusText = 'Предстоящая';
-            } else if (game.status === 'ongoing') {
-                statusClass = 'ongoing'; statusText = 'Идет сейчас';
-            } else {
-                statusClass = 'completed'; statusText = 'Завершена';
+                // Обновляем счетчик площадок
+                document.getElementById('total-courts').textContent = allCourts.length;
+
+                // Добавляем метки на карту
+                addPlacemarks(allCourts);
+
+                // Отображаем список площадок
+                displayCourtsList(allCourts);
+
+            } catch (error) {
+                console.error('Ошибка при загрузке данных о площадках:', error);
+
+                // Для демонстрации добавим тестовые данные
+                const mockCourts = [
+                    {
+                        id: 1,
+                        name: 'Спортивный комплекс «Олимпийский» Волейбольная площадка',
+                        address: 'ул. Ленинградская, д. 36, стр. 1',
+                        latitude: 55.791353,
+                        longitude: 37.559687,
+                        court_type: 'indoor',
+                        surface: 'parquet',
+                        is_free: true,
+                        is_lighted: true,
+                        has_parking: true,
+                        has_showers: false,
+                        has_locker_rooms: true,
+                        has_equipment_rental: true,
+                        has_cafe: false,
+                        description: 'Крытая волейбольная площадка в спортивном комплексе Олимпийский',
+                        status: 'approved',
+                        price_per_hour: 0,
+                        opening_time: '08:00',
+                        closing_time: '22:00'
+                    },
+                    {
+                        id: 2,
+                        name: 'Волейбольная площадка в Парке Горького',
+                        address: 'ул. Крымский Вал, д. 9, стр. 1',
+                        latitude: 55.724441,
+                        longitude: 37.605157,
+                        court_type: 'outdoor',
+                        surface: 'synthetic',
+                        is_free: true,
+                        is_lighted: false,
+                        has_parking: false,
+                        has_showers: false,
+                        has_locker_rooms: false,
+                        has_equipment_rental: false,
+                        has_cafe: false,
+                        description: 'Открытая волейбольная площадка в Парке Горького',
+                        status: 'approved',
+                        price_per_hour: 0,
+                        opening_time: '06:00',
+                        closing_time: '23:00'
+                    },
+                    {
+                        id: 3,
+                        name: 'Пляжная волейбольная площадка на Красной Пресне',
+                        address: 'ул. Красная Пресня, д. 25',
+                        latitude: 55.764548,
+                        longitude: 37.542274,
+                        court_type: 'beach',
+                        surface: 'sand',
+                        is_free: false,
+                        is_lighted: true,
+                        has_parking: true,
+                        has_showers: true,
+                        has_locker_rooms: true,
+                        has_equipment_rental: true,
+                        has_cafe: true,
+                        description: 'Песчаная пляжная волейбольная площадка',
+                        status: 'approved',
+                        price_per_hour: 500,
+                        opening_time: '09:00',
+                        closing_time: '21:00'
+                    },
+                    {
+                        id: 4,
+                        name: 'Спортивный центр «Динамо» Волейбольный зал',
+                        address: 'ул. Щукинская, д. 4',
+                        latitude: 55.769505,
+                        longitude: 37.478641,
+                        court_type: 'indoor',
+                        surface: 'parquet',
+                        is_free: false,
+                        is_lighted: true,
+                        has_parking: true,
+                        has_showers: true,
+                        has_locker_rooms: true,
+                        has_equipment_rental: false,
+                        has_cafe: false,
+                        description: 'Крытый волейбольный зал в спортивном центре Динамо',
+                        status: 'approved',
+                        price_per_hour: 800,
+                        opening_time: '07:00',
+                        closing_time: '23:00'
+                    }
+                ];
+
+                allCourts = mockCourts;
+                document.getElementById('total-courts').textContent = allCourts.length;
+                addPlacemarks(allCourts);
+                displayCourtsList(allCourts);
             }
-            const progress = (game.participants / game.max_participants) * 100;
-            return `
-                <div class="game-card">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
+        }
+
+        function addPlacemarks(courts) {
+            // Удаляем старые метки
+            placemarks.forEach(placemark => myMap.geoObjects.remove(placemark));
+            placemarks = [];
+
+            // Добавляем новые метки
+            courts.forEach(court => {
+                if (court.latitude && court.longitude) {
+                    const placemark = new ymaps.Placemark(
+                        [court.latitude, court.longitude],
+                        {
+                            hintContent: court.name,
+                            balloonContent: `
+                                <div style="font-weight: bold; margin-bottom: 10px;">${court.name}</div>
+                                <div><i class="fas fa-map-marker-alt"></i> ${court.address}</div>
+                                <div><i class="fas fa-building"></i> ${getCourtTypeLabel(court.court_type)}</div>
+                                <div><i class="fas fa-ruler-combined"></i> ${getSurfaceLabel(court.surface)}</div>
+                                <div><i class="fas fa-tag"></i> ${court.is_free ? 'Бесплатно' : `₽${court.price_per_hour}/час`}</div>
+                                <div><i class="fas fa-clock"></i> ${court.opening_time} - ${court.closing_time}</div>
+                            `
+                        },
+                        {
+                            preset: getCourtIconPreset(court.court_type)
+                        }
+                    );
+
+                    // Добавляем обработчик клика для центрирования карты
+                    placemark.events.add('click', () => {
+                        myMap.setCenter([court.latitude, court.longitude], 15);
+                    });
+
+                    myMap.geoObjects.add(placemark);
+                    placemarks.push(placemark);
+                }
+            });
+        }
+
+        function displayCourtsList(courts) {
+            const container = document.getElementById('courts-list');
+            container.innerHTML = '';
+
+            if (courts.length === 0) {
+                container.innerHTML = '<p class="text-muted">Площадки не найдены</p>';
+                return;
+            }
+
+            courts.forEach(court => {
+                const courtCard = document.createElement('div');
+                courtCard.className = 'court-card';
+                courtCard.dataset.courtName = court.name.toLowerCase();
+                courtCard.dataset.courtAddress = court.address.toLowerCase();
+
+                courtCard.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <h6 class="mb-1">${game.title}</h6>
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="game-time"><i class="fas fa-clock me-1"></i>${game.time}</span>
-                                <span class="game-status ${statusClass}">${statusText}</span>
+                            <h5>${court.name}</h5>
+                            <p class="text-muted mb-1"><i class="fas fa-map-marker-alt"></i> ${court.address}</p>
+                            <div>
+                                <span class="court-type-badge ${court.court_type}">${getCourtTypeLabel(court.court_type)}</span>
+                                <span class="court-status-badge ${court.status}">${getStatusLabel(court.status)}</span>
                             </div>
                         </div>
                         <div class="text-end">
-                            <div class="text-primary fw-bold">${game.price === 0 ? 'Бесплатно' : game.price + '₽'}</div>
-                            <small class="text-muted">${game.skill_level}</small>
+                            <div><strong>${court.is_free ? 'Бесплатно' : `₽${court.price_per_hour}/час`}</strong></div>
+                            <div class="text-muted">${court.opening_time} - ${court.closing_time}</div>
                         </div>
                     </div>
-                    ${game.description ? `<p class="small text-muted mb-2">${game.description}</p>` : ''}
-                    <div class="mb-2">
-                        <div class="d-flex justify-content-between small mb-1">
-                            <span>Участники: ${game.participants}/${game.max_participants}</span>
-                            <span>${Math.round(progress)}%</span>
-                        </div>
-                        <div class="progress" style="height: 5px;">
-                            <div class="progress-bar ${progress >= 90 ? 'bg-danger' : progress >= 70 ? 'bg-warning' : 'bg-success'}" style="width: ${progress}%"></div>
-                        </div>
+                    <p>${court.description}</p>
+                    <div class="amenities-list">
+                        ${court.is_lighted ? '<span class="amenity-item"><i class="fas fa-lightbulb"></i> Освещение</span>' : ''}
+                        ${court.has_parking ? '<span class="amenity-item"><i class="fas fa-car"></i> Парковка</span>' : ''}
+                        ${court.has_showers ? '<span class="amenity-item"><i class="fas fa-shower"></i> Душ</span>' : ''}
+                        ${court.has_locker_rooms ? '<span class="amenity-item"><i class="fas fa-tshirt"></i> Раздевалки</span>' : ''}
+                        ${court.has_equipment_rental ? '<span class="amenity-item"><i class="fas fa-volleyball-ball"></i> Прокат</span>' : ''}
+                        ${court.has_cafe ? '<span class="amenity-item"><i class="fas fa-utensils"></i> Кафе</span>' : ''}
                     </div>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="game-participants">
-                            <div class="participant-avatar"><i class="fas fa-user"></i></div>
-                            <span class="small">${game.organizer}</span>
-                        </div>
-                        <button class="btn btn-sm btn-outline-primary" onclick="joinGame(${game.id})">
-                            <i class="fas fa-sign-in-alt me-1"></i>Записаться
+                    <div class="mt-2">
+                        <button class="btn btn-sm btn-outline-primary" onclick="centerMapOnCourt(${court.latitude}, ${court.longitude})">
+                            <i class="fas fa-map-marker-alt"></i> Показать на карте
                         </button>
-                    </div>
-                </div>
-            `;
-        }
-
-        function joinGame(gameId) {
-            const game = mockGames.find(g => g.id == gameId);
-            if (!game) return;
-            alert(`Вы записались на игру: "${game.title}"\nДата: ${game.date}\nВремя: ${game.time}\nОрганизатор: ${game.organizer}`);
-        }
-
-        function updateCourtsList(courtsList) {
-            const container = document.getElementById('courtsList');
-            if (courtsList.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-5">
-                        <i class="fas fa-map-marker-alt fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">Площадки не найдены</p>
-                        <p class="small">Измените фильтры для поиска</p>
+                        <a href="#" onclick="goToCourtDetails(${court.id}); return false;" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-info-circle"></i> Подробнее
+                        </a>
                     </div>
                 `;
-                return;
-            }
-            let html = '';
-            courtsList.forEach(court => {
-                const typeLabels = { 'indoor': 'Зал', 'outdoor': 'Улица', 'beach': 'Пляж' };
-                html += `
-                    <div class="court-card ${court.court_type}" onclick="showCourtInfoModal(${court.id})">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <h6 class="mb-1">${court.name}</h6>
-                            <span class="court-type-badge ${court.court_type}">${typeLabels[court.court_type]}</span>
-                        </div>
-                        <p class="text-muted mb-2 small">
-                            <i class="fas fa-map-marker-alt me-2"></i>${court.address}
-                            <span class="ms-2 badge bg-secondary">${court.district}</span>
-                        </p>
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="price-badge ${court.is_free ? 'free' : ''}">
-                                ${court.is_free ? 'Бесплатно' : court.price_per_hour + '₽/час'}
-                            </span>
-                            <div>
-                                <small class="text-muted me-2"><i class="fas fa-star text-warning me-1"></i>${court.rating.toFixed(1)}</small>
-                                <small class="text-muted"><i class="fas fa-fire ${court.popularity > 80 ? 'text-danger' : 'text-warning'} me-1"></i>${court.popularity}%</small>
-                            </div>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <small class="text-muted"><i class="fas fa-lightbulb me-1 ${court.is_lighted ? 'text-warning' : 'text-muted'}"></i> ${court.is_lighted ? 'С освещением' : 'Без освещения'}</small>
-                            <small class="text-muted"><i class="fas fa-users me-1"></i>до ${court.capacity} чел.</small>
-                        </div>
-                        <div class="d-flex gap-2 mt-3">
-                            <button class="btn btn-sm btn-outline-primary flex-grow-1" onclick="event.stopPropagation(); showCourtInfoModal(${court.id})">
-                                <i class="fas fa-info-circle me-1"></i>Подробнее
-                            </button>
-                            <button class="btn btn-sm btn-warning flex-grow-1 games-btn" onclick="event.stopPropagation(); showCourtInfoModal(${court.id})">
-                                <i class="fas fa-volleyball-ball me-1"></i>Игры и запись
-                            </button>
-                        </div>
-                    </div>
-                `;
+
+                container.appendChild(courtCard);
             });
-            container.innerHTML = html;
         }
 
-        function updateStats() {
-            const freeCourts = courts.filter(c => c.is_free).length;
-            document.getElementById('freeCourtsCount').textContent = freeCourts;
-            document.getElementById('moscowCourts').textContent = courts.length;
+        function centerMapOnCourt(lat, lng) {
+            myMap.setCenter([lat, lng], 15);
         }
 
-        function getActiveFilters() {
-            return {
-                showIndoor: document.getElementById('filterIndoor').checked,
-                showOutdoor: document.getElementById('filterOutdoor').checked,
-                showBeach: document.getElementById('filterBeach').checked,
-                showFreeOnly: document.getElementById('filterFree').checked,
-                showLightedOnly: document.getElementById('filterLighted').checked,
-                showPopularOnly: document.getElementById('filterPopular').checked,
-                searchTerm: document.getElementById('searchCourts').value.toLowerCase()
+        function getCourtTypeLabel(type) {
+            const labels = {
+                'indoor': 'Крытая',
+                'outdoor': 'Открытая',
+                'beach': 'Пляжная'
             };
+            return labels[type] || type;
         }
 
-        function applyFilters(court, filters) {
-            if (court.court_type === 'indoor' && !filters.showIndoor) return false;
-            if (court.court_type === 'outdoor' && !filters.showOutdoor) return false;
-            if (court.court_type === 'beach' && !filters.showBeach) return false;
-            if (filters.showFreeOnly && !court.is_free) return false;
-            if (filters.showLightedOnly && !court.is_lighted) return false;
-            if (filters.showPopularOnly && court.popularity <= 80) return false;
-            if (filters.searchTerm) {
-                const searchIn = (court.name + ' ' + court.address + ' ' + court.district).toLowerCase();
-                if (!searchIn.includes(filters.searchTerm)) return false;
+        function getSurfaceLabel(surface) {
+            const labels = {
+                'sand': 'Песок',
+                'parquet': 'Паркет',
+                'synthetic': 'Синтетика',
+                'asphalt': 'Асфальт',
+                'grass': 'Газон'
+            };
+            return labels[surface] || surface;
+        }
+
+        function getStatusLabel(status) {
+            const labels = {
+                'approved': 'Одобрено',
+                'pending': 'На модерации',
+                'rejected': 'Отклонено'
+            };
+            return labels[status] || status;
+        }
+
+        function getCourtIconPreset(type) {
+            const presets = {
+                'indoor': 'islands#blueSportIcon',
+                'outdoor': 'islands#greenSportIcon',
+                'beach': 'islands#orangeSportIcon'
+            };
+            return presets[type] || 'islands#blueSportIcon';
+        }
+
+        // Фильтрация площадок
+        function applyFilters() {
+            const typeFilter = document.getElementById('court-type-filter').value;
+            const surfaceFilter = document.getElementById('surface-filter').value;
+            const freeFilter = document.getElementById('free-filter').value;
+            const lightingFilter = document.getElementById('lighting-filter').value;
+
+            let filteredCourts = [...allCourts];
+
+            if (typeFilter) {
+                filteredCourts = filteredCourts.filter(court => court.court_type === typeFilter);
             }
-            return true;
-        }
 
-        function showUpcomingGames() {
-            const count = highlightPlacemarksWithGames('#ff6b6b');
-            if (count === 0) {
-                alert('Нет площадок с предстоящими играми');
-                return;
+            if (surfaceFilter) {
+                filteredCourts = filteredCourts.filter(court => court.surface === surfaceFilter);
             }
-            alert(`Найдено ${count} площадок с предстоящими играми`);
+
+            if (freeFilter !== '') {
+                const isFree = freeFilter === 'true';
+                filteredCourts = filteredCourts.filter(court => court.is_free === isFree);
+            }
+
+            if (lightingFilter !== '') {
+                const hasLighting = lightingFilter === 'true';
+                filteredCourts = filteredCourts.filter(court => court.is_lighted === hasLighting);
+            }
+
+            // Обновляем отображение
+            addPlacemarks(filteredCourts);
+            displayCourtsList(filteredCourts);
+            document.getElementById('total-courts').textContent = filteredCourts.length;
         }
 
-        function setupEventListeners() {
-            document.getElementById('locateMe').addEventListener('click', function() {
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(
-                        function(position) {
-                            const lat = position.coords.latitude;
-                            const lng = position.coords.longitude;
-                            map.setCenter([lat, lng], 15);
-                            if (userPlacemark) map.geoObjects.remove(userPlacemark);
-                            userPlacemark = createUserPlacemark(lat, lng);
-                            map.geoObjects.add(userPlacemark);
-                        },
-                        function(error) {
-                            alert('Не удалось определить местоположение. Проверьте настройки геолокации.');
-                        }
-                    );
+        // Добавляем обработчики для фильтров
+        document.getElementById('court-type-filter').addEventListener('change', applyFilters);
+        document.getElementById('surface-filter').addEventListener('change', applyFilters);
+        document.getElementById('free-filter').addEventListener('change', applyFilters);
+        document.getElementById('lighting-filter').addEventListener('change', applyFilters);
+
+        // Функция перехода к странице деталей площадки
+        function goToCourtDetails(courtId) {
+            window.location.href = `/court/${courtId}/`;
+        }
+
+        // Добавляем обработчик для поиска в списке площадок
+        document.getElementById('court-search-button').addEventListener('click', function() {
+            const searchTerm = document.getElementById('court-search-input').value.toLowerCase();
+            filterCourtsList(searchTerm);
+        });
+
+        document.getElementById('court-search-input').addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            filterCourtsList(searchTerm);
+        });
+
+        function filterCourtsList(searchTerm) {
+            const courtCards = document.querySelectorAll('#courts-list .court-card');
+
+            courtCards.forEach(card => {
+                const courtName = card.dataset.courtName;
+                const courtAddress = card.dataset.courtAddress;
+
+                // Проверяем, соответствует ли площадка поисковому запросу
+                const matchesSearch = !searchTerm ||
+                                     courtName.includes(searchTerm) ||
+                                     courtAddress.includes(searchTerm);
+
+                if (matchesSearch) {
+                    card.style.display = 'block';
                 } else {
-                    alert('Геолокация не поддерживается вашим браузером');
+                    card.style.display = 'none';
                 }
             });
-
-            document.getElementById('showUpcomingGames').addEventListener('click', showUpcomingGames);
-            document.getElementById('highlightAll').addEventListener('click', function() {
-                highlightAllPlacemarks('#ffd700');
-                alert(`Подсвечено ${placemarks.length} площадок`);
-            });
-
-            const sidebar = document.getElementById('sidebar');
-            const toggleBtn = document.getElementById('toggleSidebar');
-            const closeBtn = document.getElementById('closeSidebar');
-            toggleBtn.addEventListener('click', () => {
-                sidebar.classList.toggle('active');
-                toggleBtn.innerHTML = sidebar.classList.contains('active') 
-                    ? '<i class="fas fa-times"></i>' 
-                    : '<i class="fas fa-bars"></i>';
-            });
-            closeBtn.addEventListener('click', () => {
-                sidebar.classList.remove('active');
-                toggleBtn.innerHTML = '<i class="fas fa-bars"></i>';
-            });
-
-            document.getElementById('searchCourts').addEventListener('input', updateMap);
-            document.getElementById('searchButton').addEventListener('click', updateMap);
-            document.querySelectorAll('.filter-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', updateMap);
-            });
-            document.getElementById('searchCourts').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') updateMap();
-            });
         }
-
-        window.showCourtInfoModal = showCourtInfoModal;
-        window.joinGame = joinGame;
-        window.createGame = createGame;
     </script>
 </body>
 </html>

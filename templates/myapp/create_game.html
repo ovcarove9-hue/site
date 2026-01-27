@@ -1,484 +1,317 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Создать игру | Волейбольный клуб</title>
-    
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
-    <style>
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-        }
-        
-        .header {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            padding: 30px;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            text-align: center;
-        }
-        
-        .header h1 {
-            color: #2d3748;
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-        }
-        
-        .header p {
-            color: #718096;
-            font-size: 1.1rem;
-        }
-        
-        .form-card {
-            background: white;
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-            margin-bottom: 30px;
-        }
-        
-        .form-label {
-            font-weight: 600;
-            color: #4a5568;
-            margin-bottom: 8px;
-            display: block;
-        }
-        
-        .form-control, .form-select {
-            border: 2px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 12px 15px;
-            font-size: 1rem;
-            transition: all 0.3s;
-        }
-        
-        .form-control:focus, .form-select:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-        
-        .btn {
-            padding: 12px 30px;
-            border-radius: 10px;
-            font-weight: 600;
-            font-size: 1rem;
-            transition: all 0.3s;
-        }
-        
-        .btn-success {
-            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-            border: none;
-        }
-        
-        .btn-success:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 7px 15px rgba(56, 161, 105, 0.3);
-        }
-        
-        .court-card {
-            border: 2px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 10px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .court-card:hover {
-            border-color: #667eea;
-            background-color: #f0f5ff;
-        }
-        
-        .court-card.selected {
-            border-color: #48bb78;
-            background-color: #f0fff4;
-        }
-        
-        .court-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .court-name {
-            font-weight: 600;
-            color: #2d3748;
-        }
-        
-        .court-address {
-            color: #718096;
-            font-size: 0.9rem;
-        }
-        
-        .court-price {
-            background: #667eea;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-        }
-        
-        .court-free {
-            background: #48bb78;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <!-- Шапка -->
-        <div class="header">
-            <h1><i class="fas fa-volleyball-ball"></i> Создать новую игру</h1>
-            <p>Организуйте волейбольную игру и выберите площадку</p>
-            
-            <!-- Навигация -->
-            <div class="mt-4">
-                <a href="{% url 'home' %}" class="btn btn-outline-secondary me-2">
-                    <i class="fas fa-home"></i> На главную
-                </a>
-                <a href="{% url 'map' %}" class="btn btn-outline-secondary me-2">
-                    <i class="fas fa-map-marked-alt"></i> Карта площадок
-                </a>
-                {% if user.is_authenticated %}
-                <a href="{% url 'profile' user.id %}" class="btn btn-outline-secondary">
-                    <i class="fas fa-user"></i> Мой профиль
-                </a>
-                {% endif %}
-            </div>
-        </div>
-        
-        <!-- Сообщения -->
-        {% if messages %}
-        <div class="mb-4">
-            {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                {{ message|safe }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
-        
-        <!-- Форма -->
-        <div class="form-card">
-            <form method="post" action="{% url 'create_game' %}">
-                {% csrf_token %}
-                
-                <!-- Основная информация -->
-                <div class="row mb-4">
-                    <div class="col-md-8">
-                        <div class="mb-3">
-                            <label for="id_title" class="form-label">
-                                <i class="fas fa-heading"></i> Название игры *
-                            </label>
-                            {{ form.title }}
-                            {% if form.title.errors %}
-                            <div class="text-danger">{{ form.title.errors }}</div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-4">
-                        <div class="mb-3">
-                            <label for="id_sport_type" class="form-label">
-                                <i class="fas fa-volleyball-ball"></i> Тип игры *
-                            </label>
-                            {{ form.sport_type }}
-                            {% if form.sport_type.errors %}
-                            <div class="text-danger">{{ form.sport_type.errors }}</div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Дата и время -->
-                <div class="row mb-4">
-                    <div class="col-md-4">
-                        <div class="mb-3">
-                            <label for="id_game_date" class="form-label">
-                                <i class="fas fa-calendar-day"></i> Дата игры *
-                            </label>
-                            {{ form.game_date }}
-                            {% if form.game_date.errors %}
-                            <div class="text-danger">{{ form.game_date.errors }}</div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-4">
-                        <div class="mb-3">
-                            <label for="id_game_time" class="form-label">
-                                <i class="fas fa-clock"></i> Время начала *
-                            </label>
-                            {{ form.game_time }}
-                            {% if form.game_time.errors %}
-                            <div class="text-danger">{{ form.game_time.errors }}</div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-4">
-                        <div class="mb-3">
-                            <label for="id_end_time" class="form-label">
-                                <i class="fas fa-clock"></i> Время окончания
-                            </label>
-                            {{ form.end_time }}
-                            {% if form.end_time.errors %}
-                            <div class="text-danger">{{ form.end_time.errors }}</div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- ВЫБОР ПЛОЩАДКИ -->
-                <div class="mb-4">
-                    <h5 class="mb-3"><i class="fas fa-map-marker-alt"></i> Выбор площадки</h5>
-                    
-                    <div class="mb-3">
-                        <label for="id_court" class="form-label">Выберите площадку *</label>
-                        {{ form.court }}
-                        <small class="text-muted">Выберите площадку из списка одобренных</small>
-                        {% if form.court.errors %}
-                        <div class="text-danger">{{ form.court.errors }}</div>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- Список доступных площадок -->
-                    <div class="mb-3">
-                        <p class="text-muted mb-2">Доступные площадки:</p>
-                        <div class="court-list" style="max-height: 300px; overflow-y: auto;">
-                            {% for court in courts %}
-                            <div class="court-card" onclick="selectCourt({{ court.id }}, '{{ court.name }}', '{{ court.address }}')" 
-                                 id="court-card-{{ court.id }}">
-                                <div class="court-info">
-                                    <div>
-                                        <div class="court-name">{{ court.name }}</div>
-                                        <div class="court-address">{{ court.address }}</div>
-                                        <div class="mt-2">
-                                            {% if court.is_free %}
-                                            <span class="court-free">Бесплатно</span>
-                                            {% else %}
-                                            <span class="court-price">{{ court.price_per_hour }} руб/час</span>
-                                            {% endif %}
-                                            {% if court.is_lighted %}
-                                            <span class="badge bg-warning ms-2">Освещение</span>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <i class="fas fa-check-circle text-success" style="display: none;" id="court-check-{{ court.id }}"></i>
-                                    </div>
-                                </div>
-                            </div>
-                            {% empty %}
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle"></i> Нет доступных площадок. 
-                                <a href="{% url 'map' %}">Посмотрите карту площадок</a>
-                            </div>
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="content-box">
+                <h3><i class="fas fa-plus-circle"></i> {{ page_title }}</h3>
+
+                <form method="post" id="createGameForm">
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                {{ error }}
                             {% endfor %}
                         </div>
-                    </div>
-                    
-                    <!-- Поле для ручного ввода локации (если площадка не выбрана) -->
+                    {% endif %}
+
                     <div class="mb-3">
-                        <label for="id_location" class="form-label">
-                            Или укажите место проведения вручную
-                        </label>
+                        <label for="{{ form.title.id_for_label }}" class="form-label"><strong>{{ form.title.label }}</strong></label>
+                        {{ form.title }}
+                        {% if form.title.help_text %}
+                            <small class="form-text text-muted">{{ form.title.help_text }}</small>
+                        {% endif %}
+                        {% if form.title.errors %}
+                            <div class="text-danger">{{ form.title.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.sport_type.id_for_label }}" class="form-label"><strong>{{ form.sport_type.label }}</strong></label>
+                                {{ form.sport_type }}
+                                {% if form.sport_type.errors %}
+                                    <div class="text-danger">{{ form.sport_type.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.skill_level.id_for_label }}" class="form-label"><strong>{{ form.skill_level.label }}</strong></label>
+                                {{ form.skill_level }}
+                                {% if form.skill_level.errors %}
+                                    <div class="text-danger">{{ form.skill_level.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.game_date.id_for_label }}" class="form-label"><strong>{{ form.game_date.label }}</strong></label>
+                                {{ form.game_date }}
+                                {% if form.game_date.errors %}
+                                    <div class="text-danger">{{ form.game_date.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.game_time.id_for_label }}" class="form-label"><strong>{{ form.game_time.label }}</strong></label>
+                                {{ form.game_time }}
+                                {% if form.game_time.errors %}
+                                    <div class="text-danger">{{ form.game_time.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.end_time.id_for_label }}" class="form-label"><strong>{{ form.end_time.label }}</strong></label>
+                        {{ form.end_time }}
+                        {% if form.end_time.errors %}
+                            <div class="text-danger">{{ form.end_time.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="court_search" class="form-label"><strong>{{ form.court.label }}</strong></label>
+                        <input type="text" id="court_search" class="form-control" placeholder="Начните вводить название площадки..." autocomplete="off">
+                        <input type="hidden" name="court" id="court_hidden" value="{{ form.court.value }}">
+                        <div id="court_suggestions" class="dropdown-menu" style="display: none; max-height: 200px; overflow-y: auto; width: 100%;"></div>
+                        {% if form.court.errors %}
+                            <div class="text-danger">{{ form.court.errors }}</div>
+                        {% endif %}
+                        <div id="selected_court_display" class="mt-2">
+                            {% if form.court.value %}
+                                <span class="badge bg-info">Выбрана площадка: <span id="selected_court_name"></span></span>
+                                <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="clearCourtSelection()">×</button>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.location.id_for_label }}" class="form-label"><strong>{{ form.location.label }}</strong></label>
                         {{ form.location }}
-                        <small class="text-muted">Если площадка не выбрана, укажите адрес здесь</small>
+                        {% if form.location.help_text %}
+                            <small class="form-text text-muted">{{ form.location.help_text }}</small>
+                        {% endif %}
+                        {% if form.location.errors %}
+                            <div class="text-danger">{{ form.location.errors }}</div>
+                        {% endif %}
                     </div>
-                </div>
-                
-                <!-- Описание -->
-                <div class="mb-4">
-                    <label for="id_description" class="form-label">
-                        <i class="fas fa-align-left"></i> Описание игры
-                    </label>
-                    {{ form.description }}
-                </div>
-                
-                <!-- Участники и уровень -->
-                <div class="row mb-4">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="id_max_players" class="form-label">
-                                <i class="fas fa-users"></i> Макс. количество игроков *
-                            </label>
-                            {{ form.max_players }}
-                        </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.description.id_for_label }}" class="form-label"><strong>{{ form.description.label }}</strong></label>
+                        {{ form.description }}
+                        {% if form.description.help_text %}
+                            <small class="form-text text-muted">{{ form.description.help_text }}</small>
+                        {% endif %}
+                        {% if form.description.errors %}
+                            <div class="text-danger">{{ form.description.errors }}</div>
+                        {% endif %}
                     </div>
-                    
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="id_skill_level" class="form-label">
-                                <i class="fas fa-chart-line"></i> Уровень подготовки
-                            </label>
-                            {{ form.skill_level }}
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Контактная информация -->
-                <div class="mb-4">
-                    <div class="p-4 bg-light rounded">
-                        <h5 class="mb-3"><i class="fas fa-id-card"></i> Контактная информация</h5>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="id_contact_name" class="form-label">Контактное лицо *</label>
-                                {{ form.contact_name }}
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.max_players.id_for_label }}" class="form-label"><strong>{{ form.max_players.label }}</strong></label>
+                                {{ form.max_players }}
+                                {% if form.max_players.errors %}
+                                    <div class="text-danger">{{ form.max_players.errors }}</div>
+                                {% endif %}
                             </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="id_contact_phone" class="form-label">Телефон для связи</label>
-                                {{ form.contact_phone }}
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.price.id_for_label }}" class="form-label"><strong>{{ form.price.label }}</strong></label>
+                                {{ form.price }}
+                                {% if form.price.errors %}
+                                    <div class="text-danger">{{ form.price.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
-                </div>
-                
-                <!-- Дополнительные опции -->
-                <div class="mb-4">
-                    <div class="form-check">
-                        {{ form.is_private }}
-                        <label class="form-check-label" for="id_is_private">
-                            Приватная игра (только по приглашению)
-                        </label>
-                    </div>
-                </div>
-                
-                <!-- Кнопки -->
-                <div class="d-flex justify-content-between mt-4">
-                    <a href="{% url 'home' %}" class="btn btn-outline-secondary">
-                        <i class="fas fa-arrow-left me-2"></i> Назад
-                    </a>
 
-                    <div>
-                        <button type="reset" class="btn btn-outline-danger me-2">
-                            <i class="fas fa-redo me-2"></i> Очистить
-                        </button>
-
-                        <button type="submit" class="btn btn-success px-4" id="submit-btn">
-                            <i class="fas fa-plus-circle me-2"></i> Создать игру
-                        </button>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.is_private }}
+                            <label class="form-check-label" for="{{ form.is_private.id_for_label }}">{{ form.is_private.label }}</label>
+                        </div>
                     </div>
-                </div>
-            </form>
-        </div>
-        
-        <!-- Советы -->
-        <div class="tips-card" style="background: #ebf8ff; border: 2px solid #90cdf4; border-radius: 15px; padding: 25px;">
-            <h5><i class="fas fa-lightbulb"></i> Советы по организации игры</h5>
-            <ul>
-                <li>Выберите площадку из списка — это поможет другим игрокам найти вас</li>
-                <li>Указывайте точное время начала и окончания</li>
-                <li>Опишите уровень игры, чтобы пришли подходящие игроки</li>
-                <li>После создания игры вы сможете управлять списком участников</li>
-            </ul>
+
+                    <div class="mb-3">
+                        <label for="{{ form.contact_name.id_for_label }}" class="form-label"><strong>{{ form.contact_name.label }}</strong></label>
+                        {{ form.contact_name }}
+                        {% if form.contact_name.errors %}
+                            <div class="text-danger">{{ form.contact_name.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.contact_phone.id_for_label }}" class="form-label"><strong>{{ form.contact_phone.label }}</strong></label>
+                        {{ form.contact_phone }}
+                        {% if form.contact_phone.errors %}
+                            <div class="text-danger">{{ form.contact_phone.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-volleyball-ball"></i> Создать игру
+                        </button>
+                        <a href="{% url 'home' %}" class="btn btn-secondary">Отмена</a>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-    
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <script>
-        // Устанавливаем минимальную дату - сегодня
-        document.addEventListener('DOMContentLoaded', function() {
-            const today = new Date().toISOString().split('T')[0];
-            const dateInput = document.getElementById('id_game_date');
-            if (dateInput) {
-                dateInput.min = today;
-                if (!dateInput.value) {
-                    dateInput.value = today;
-                }
+</div>
+
+<script>
+// Функция для очистки выбранной площадки
+function clearCourtSelection() {
+    document.getElementById('court_hidden').value = '';
+    document.getElementById('court_search').value = '';
+    document.getElementById('selected_court_display').innerHTML = '';
+    document.getElementById('selected_court_display').style.display = 'none';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Добавляем валидацию формы
+    const form = document.getElementById('createGameForm');
+
+    // Установим минимальную дату на сегодня
+    const today = new Date().toISOString().split('T')[0];
+    const dateInput = document.getElementById('{{ form.game_date.id_for_label }}');
+    if (dateInput) {
+        dateInput.setAttribute('min', today);
+    }
+
+    // При изменении даты игры, обновляем минимальное время
+    dateInput.addEventListener('change', function() {
+        const selectedDate = new Date(this.value);
+        const currentDate = new Date();
+
+        if (selectedDate.toDateString() === currentDate.toDateString()) {
+            // Если выбрана сегодняшняя дата, установим минимальное время на текущее
+            const hours = currentDate.getHours();
+            const minutes = currentDate.getMinutes().toString().padStart(2, '0');
+            const currentTime = `${hours.toString().padStart(2, '0')}:${minutes}`;
+
+            const timeInput = document.getElementById('{{ form.game_time.id_for_label }}');
+            if (timeInput) {
+                timeInput.setAttribute('min', currentTime);
             }
-
-            // Устанавливаем время (ближайший час)
-            const timeInput = document.getElementById('id_game_time');
-            if (timeInput && !timeInput.value) {
-                const now = new Date();
-                const nextHour = new Date(now.getTime() + 60 * 60 * 1000);
-                timeInput.value = nextHour.toTimeString().slice(0, 5);
-            }
-
-            // Автоматическое заполнение контактной информации
-            const contactName = document.getElementById('id_contact_name');
-            const contactPhone = document.getElementById('id_contact_phone');
-
-            // Заполняем контактную информацию из данных пользователя, если поля пустые
-            if (contactName && !contactName.value && contactName.placeholder.includes('Ваше имя')) {
-                // Здесь можно использовать данные из профиля пользователя, если они доступны
-            }
-        });
-
-        // Функция выбора площадки
-        function selectCourt(courtId, courtName, courtAddress) {
-            // Устанавливаем значение в выпадающем списке
-            const select = document.getElementById('id_court');
-            if(select) {
-                select.value = courtId;
-            }
-
-            // Заполняем поле локации
-            const locationInput = document.getElementById('id_location');
-            if (locationInput) {
-                locationInput.value = courtName + ', ' + courtAddress;
-            }
-
-            // Сбрасываем выделение всех карточек
-            document.querySelectorAll('.court-card').forEach(card => {
-                card.classList.remove('selected');
-            });
-
-            // Показываем галочку на выбранной карточке
-            document.querySelectorAll('.court-card i').forEach(icon => {
-                icon.style.display = 'none';
-            });
-
-            // Выделяем выбранную карточку
-            const selectedCard = document.getElementById('court-card-' + courtId);
-            if (selectedCard) {
-                selectedCard.classList.add('selected');
-                const checkIcon = document.getElementById('court-check-' + courtId);
-                if (checkIcon) {
-                    checkIcon.style.display = 'inline';
-                }
+        } else {
+            // Если выбрана другая дата, сбросим ограничение
+            const timeInput = document.getElementById('{{ form.game_time.id_for_label }}');
+            if (timeInput) {
+                timeInput.removeAttribute('min');
             }
         }
+    });
 
-        // Добавляем обработчик отправки формы для лучшей обработки ошибок
-        document.querySelector('form[method="post"]').addEventListener('submit', function(e) {
-            const submitBtn = document.getElementById('submit-btn');
-            if(submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Создание...';
+    // Добавляем функциональность поиска площадок
+    const courtSearchInput = document.getElementById('court_search');
+    const courtHiddenInput = document.getElementById('court_hidden');
+    const courtSuggestions = document.getElementById('court_suggestions');
+    const selectedCourtDisplay = document.getElementById('selected_court_display');
 
-                // Восстановление кнопки при ошибке
-                setTimeout(() => {
-                    if(submitBtn) {
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = '<i class="fas fa-plus-circle me-2"></i> Создать игру';
-                    }
-                }, 5000);
-            }
+    // Если уже выбрана площадка, отображаем её название
+    if (courtHiddenInput.value) {
+        fetch(`/api/court/${courtHiddenInput.value}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.name) {
+                    document.getElementById('selected_court_name').textContent = data.name;
+                    selectedCourtDisplay.style.display = 'block';
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    // Функция для отображения результатов поиска
+    function showSuggestions(suggestions) {
+        courtSuggestions.innerHTML = '';
+
+        if (suggestions.length === 0) {
+            courtSuggestions.style.display = 'none';
+            return;
+        }
+
+        suggestions.forEach(function(court) {
+            const suggestionItem = document.createElement('a');
+            suggestionItem.href = '#';
+            suggestionItem.className = 'dropdown-item';
+            suggestionItem.textContent = `${court.name} (${court.address})`;
+
+            suggestionItem.addEventListener('click', function(e) {
+                e.preventDefault();
+
+                // Устанавливаем выбранную площадку
+                courtHiddenInput.value = court.id;
+                courtSearchInput.value = court.name;
+
+                // Отображаем выбранную площадку
+                document.getElementById('selected_court_name').textContent = court.name;
+                selectedCourtDisplay.style.display = 'inline-block';
+
+                // Скрываем подсказки
+                courtSuggestions.style.display = 'none';
+            });
+
+            courtSuggestions.appendChild(suggestionItem);
         });
-    </script>
-</body>
-</html>
+
+        courtSuggestions.style.display = 'block';
+    }
+
+    // Обработка ввода в поле поиска
+    courtSearchInput.addEventListener('input', function() {
+        const query = this.value.trim();
+
+        if (query.length < 2) {
+            courtSuggestions.style.display = 'none';
+            return;
+        }
+
+        // Выполняем поиск площадок
+        fetch(`/api/search-courts/?query=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                showSuggestions(data || []);
+            })
+            .catch(error => {
+                console.error('Error searching courts:', error);
+                courtSuggestions.style.display = 'none';
+            });
+    });
+
+    // Скрываем подсказки при клике вне поля поиска
+    document.addEventListener('click', function(e) {
+        if (!courtSearchInput.contains(e.target) && !courtSuggestions.contains(e.target)) {
+            setTimeout(() => {
+                courtSuggestions.style.display = 'none';
+            }, 150); // Небольшая задержка для обработки клика по элементу
+        }
+    });
+
+    // Валидация формы перед отправкой
+    form.addEventListener('submit', function(e) {
+        if (courtHiddenInput.required && !courtHiddenInput.value) {
+            e.preventDefault();
+            alert('Пожалуйста, выберите площадку для игры.');
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}
