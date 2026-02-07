@@ -1,11 +1,12 @@
 {% extends 'base.html' %}
 
-{% block title %}Регистрация | Волейбольное сообщество{% endblock %}
+{% block title %}Регистрация | VolleyMap{% endblock %}
 
 {% block extra_head %}
 <style>
     body {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%);
+        background-attachment: fixed;
         min-height: 100vh;
         display: flex;
         align-items: center;
@@ -14,12 +15,14 @@
     }
 
     .register-container {
-        background: white;
-        border-radius: 20px;
-        padding: 40px;
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(10px);
+        border-radius: 24px;
+        padding: 45px;
         width: 100%;
-        max-width: 400px;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        max-width: 450px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
     .register-header {
@@ -28,28 +31,45 @@
     }
 
     .register-header h1 {
-        color: #4f46e5;
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
         font-weight: 700;
+        font-size: 2.25rem;
     }
 
     .btn-register {
-        background: linear-gradient(90deg, #4f46e5, #7c3aed);
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
         color: white;
         border: none;
-        padding: 10px;
+        padding: 12px;
         font-weight: 600;
         width: 100%;
         margin-top: 1rem;
+        border-radius: 12px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
     }
 
     .btn-register:hover {
-        background: linear-gradient(90deg, #4338ca, #6d28d9);
+        background: linear-gradient(135deg, #4338ca 0%, #6d28d9 100%);
         color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(79, 70, 229, 0.4);
+    }
+
+    .form-control {
+        border-radius: 12px;
+        border: 2px solid #e2e8f0;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s;
     }
 
     .form-control:focus {
         border-color: #4f46e5;
-        box-shadow: 0 0 0 0.25rem rgba(79, 70, 229, 0.25);
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        outline: none;
     }
 
     .links {

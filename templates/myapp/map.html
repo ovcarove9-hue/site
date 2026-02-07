@@ -1,21 +1,24 @@
 {% extends 'base.html' %}
 
-{% block title %}Карта волейбольных площадок | Волейбольное сообщество{% endblock %}
+{% block title %}Карта волейбольных площадок | VolleyMap{% endblock %}
 
 {% block extra_head %}
 <style>
     body {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%);
+        background-attachment: fixed;
         min-height: 100vh;
         padding: 20px;
     }
 
     .map-container {
-        background: white;
-        border-radius: 20px;
-        padding: 30px;
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(10px);
+        border-radius: 24px;
+        padding: 35px;
         width: 100%;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
     .map-header {
@@ -24,8 +27,12 @@
     }
 
     .map-header h1 {
-        color: #4f46e5;
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
         font-weight: 700;
+        font-size: 2.5rem;
     }
 
     #map {
@@ -43,15 +50,20 @@
     }
 
     .court-card {
-        border: 1px solid #dee2e6;
-        border-radius: 10px;
-        padding: 15px;
-        margin-bottom: 10px;
-        transition: box-shadow 0.3s;
+        border: 2px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 15px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        background: linear-gradient(to right, #ffffff 0%, #f8fafc 100%);
+        cursor: pointer;
     }
 
     .court-card:hover {
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        box-shadow: 0 8px 24px rgba(79, 70, 229, 0.2);
+        transform: translateY(-4px) translateX(4px);
+        border-color: #4f46e5;
+        background: linear-gradient(to right, #f8fafc 0%, #ffffff 100%);
     }
 
     .court-type-badge {
@@ -92,16 +104,21 @@
     }
 
     .filters-section {
-        background-color: #f8f9fa;
-        padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 20px;
+        background: linear-gradient(to right, #f1f5f9 0%, #e2e8f0 100%);
+        padding: 25px;
+        border-radius: 16px;
+        margin-bottom: 25px;
+        border: 1px solid rgba(79, 70, 229, 0.1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     }
 
     .court-count {
-        font-weight: bold;
-        color: #4f46e5;
-        font-size: 1.2em;
+        font-weight: 700;
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-size: 1.3em;
     }
 </style>
 {% endblock %}

@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Волейбольный клуб - Главная страница{% endblock %}
+{% block title %}VolleyMap - Главная страница{% endblock %}
 
 {% block extra_head %}
 <!-- КРИТИЧЕСКИЙ ФИКС ДЛЯ ОШИБОК РАСШИРЕНИЙ БРАУЗЕРА -->
@@ -42,8 +42,8 @@
 {% block content %}
 <!-- Приветственная секция -->
 <div class="welcome-section">
-    <h2><i class="fas fa-volleyball-ball"></i> Добро пожаловать в Волейбольный клуб!</h2>
-    <p style="font-size: 1.2rem; opacity: 0.9;">Место, где волейболисты находят партнёров, игры и новые знакомства</p>
+    <h2><i class="fas fa-volleyball-ball"></i> Добро пожаловать в VolleyMap!</h2>
+    <p style="font-size: 1.2rem; opacity: 0.9;">Найдите волейбольные площадки, партнёров для игры и присоединяйтесь к сообществу</p>
     {% if not user.is_authenticated %}
     <div style="margin-top: 20px;">
         <a href="{% url 'search' %}" style="background: transparent; border: 2px solid white; color: white; padding: 12px 30px; border-radius: 50px; text-decoration: none; font-weight: 600; display: inline-block; margin: 0 10px;">
