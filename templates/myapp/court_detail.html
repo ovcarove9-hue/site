@@ -1,12 +1,9 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ court.name }} | Волейбольное сообщество</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
+{% extends 'base.html' %}
+
+{% block title %}{{ court.name }} | Волейбольное сообщество{% endblock %}
+
+{% block extra_head %}
+<style>
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
@@ -142,8 +139,9 @@
             color: #ffc107;
         }
     </style>
-</head>
-<body>
+{% endblock %}
+
+{% block body %}
     <div class="container">
         <div class="court-detail-container">
             <div class="court-header">
@@ -348,7 +346,6 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Yandex.Maps API -->
     <script src="https://api-maps.yandex.ru/2.1/?apikey=131116f7-f47e-4295-b369-53b193e0ce23&lang=ru_RU"></script>
     <script>
@@ -385,5 +382,4 @@
             </a>
         </div>
     </div>
-</body>
-</html>
+{% endblock %}

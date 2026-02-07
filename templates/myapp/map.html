@@ -1,525 +1,524 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Карта волейбольных площадок | Волейбольное сообщество</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
+{% extends 'base.html' %}
 
-        .map-container {
-            background: white;
-            border-radius: 20px;
-            padding: 30px;
-            width: 100%;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-        }
+{% block title %}Карта волейбольных площадок | Волейбольное сообщество{% endblock %}
 
-        .map-header {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
+{% block extra_head %}
+<style>
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+    }
 
-        .map-header h1 {
-            color: #4f46e5;
-            font-weight: 700;
-        }
+    .map-container {
+        background: white;
+        border-radius: 20px;
+        padding: 30px;
+        width: 100%;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    }
 
-        #map {
-            height: 600px;
-            width: 100%;
-            border-radius: 10px;
-            margin-top: 20px;
-        }
+    .map-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
 
-        .court-info {
-            background-color: #f8f9fa;
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 20px;
-        }
+    .map-header h1 {
+        color: #4f46e5;
+        font-weight: 700;
+    }
 
-        .court-card {
-            border: 1px solid #dee2e6;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 10px;
-            transition: box-shadow 0.3s;
-        }
+    #map {
+        height: 600px;
+        width: 100%;
+        border-radius: 10px;
+        margin-top: 20px;
+    }
 
-        .court-card:hover {
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
+    .court-info {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 10px;
+        margin-top: 20px;
+    }
 
-        .court-type-badge {
-            font-size: 0.8em;
-            padding: 5px 10px;
-            border-radius: 20px;
-            color: white;
-        }
+    .court-card {
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 10px;
+        transition: box-shadow 0.3s;
+    }
 
-        .indoor { background-color: #4f46e5; }
-        .outdoor { background-color: #10b981; }
-        .beach { background-color: #f59e0b; }
+    .court-card:hover {
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
 
-        .court-status-badge {
-            font-size: 0.8em;
-            padding: 5px 10px;
-            border-radius: 20px;
-            color: white;
-        }
+    .court-type-badge {
+        font-size: 0.8em;
+        padding: 5px 10px;
+        border-radius: 20px;
+        color: white;
+    }
 
-        .approved { background-color: #10b981; }
-        .pending { background-color: #f59e0b; }
-        .rejected { background-color: #ef4444; }
+    .indoor { background-color: #4f46e5; }
+    .outdoor { background-color: #10b981; }
+    .beach { background-color: #f59e0b; }
 
-        .amenities-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 10px;
-        }
+    .court-status-badge {
+        font-size: 0.8em;
+        padding: 5px 10px;
+        border-radius: 20px;
+        color: white;
+    }
 
-        .amenity-item {
-            background-color: #e0e7ff;
-            color: #4f46e5;
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 0.8em;
-        }
+    .approved { background-color: #10b981; }
+    .pending { background-color: #f59e0b; }
+    .rejected { background-color: #ef4444; }
 
-        .filters-section {
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-        }
+    .amenities-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+    }
 
-        .court-count {
-            font-weight: bold;
-            color: #4f46e5;
-            font-size: 1.2em;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="map-container">
-            <div class="map-header">
-                <h1><i class="fas fa-map-marked-alt"></i> Карта волейбольных площадок</h1>
-                <p class="text-muted">Все волейбольные площадки в городе</p>
-                <div class="court-count">
-                    Всего площадок: <span id="total-courts">0</span>
-                </div>
+    .amenity-item {
+        background-color: #e0e7ff;
+        color: #4f46e5;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 0.8em;
+    }
+
+    .filters-section {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+
+    .court-count {
+        font-weight: bold;
+        color: #4f46e5;
+        font-size: 1.2em;
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="container">
+    <div class="map-container">
+        <div class="map-header">
+            <h1><i class="fas fa-map-marked-alt"></i> Карта волейбольных площадок</h1>
+            <p class="text-muted">Все волейбольные площадки в городе</p>
+            <div class="court-count">
+                Всего площадок: <span id="total-courts">0</span>
             </div>
+        </div>
 
-            <div class="filters-section">
-                <div class="row">
-                    <div class="col-md-3">
-                        <label for="court-type-filter" class="form-label">Тип площадки</label>
-                        <select class="form-select" id="court-type-filter">
-                            <option value="">Все типы</option>
-                            <option value="indoor">Крытая</option>
-                            <option value="outdoor">Открытая</option>
-                            <option value="beach">Пляжная</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label for="surface-filter" class="form-label">Покрытие</label>
-                        <select class="form-select" id="surface-filter">
-                            <option value="">Все покрытия</option>
-                            <option value="sand">Песок</option>
-                            <option value="parquet">Паркет</option>
-                            <option value="synthetic">Синтетика</option>
-                            <option value="asphalt">Асфальт</option>
-                            <option value="grass">Газон</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label for="free-filter" class="form-label">Только бесплатные</label>
-                        <select class="form-select" id="free-filter">
-                            <option value="">Все</option>
-                            <option value="true">Да</option>
-                            <option value="false">Нет</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label for="lighting-filter" class="form-label">С освещением</label>
-                        <select class="form-select" id="lighting-filter">
-                            <option value="">Все</option>
-                            <option value="true">Да</option>
-                            <option value="false">Нет</option>
-                        </select>
-                    </div>
+        <div class="filters-section">
+            <div class="row">
+                <div class="col-md-3">
+                    <label for="court-type-filter" class="form-label">Тип площадки</label>
+                    <select class="form-select" id="court-type-filter">
+                        <option value="">Все типы</option>
+                        <option value="indoor">Крытая</option>
+                        <option value="outdoor">Открытая</option>
+                        <option value="beach">Пляжная</option>
+                    </select>
                 </div>
-            </div>
-
-            <div id="map"></div>
-
-            <div class="court-info mt-4">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h3><i class="fas fa-list"></i> Список площадок</h3>
-                    <div class="input-group" style="max-width: 300px;">
-                        <input type="text" class="form-control" id="court-search-input" placeholder="Поиск по названию или адресу...">
-                        <button class="btn btn-outline-secondary" type="button" id="court-search-button">
-                            <i class="fas fa-search"></i>
-                        </button>
-                    </div>
+                <div class="col-md-3">
+                    <label for="surface-filter" class="form-label">Покрытие</label>
+                    <select class="form-select" id="surface-filter">
+                        <option value="">Все покрытия</option>
+                        <option value="sand">Песок</option>
+                        <option value="parquet">Паркет</option>
+                        <option value="synthetic">Синтетика</option>
+                        <option value="asphalt">Асфальт</option>
+                        <option value="grass">Газон</option>
+                    </select>
                 </div>
-                <div id="courts-list">
-                    <!-- Список площадок будет загружен через JavaScript -->
+                <div class="col-md-3">
+                    <label for="free-filter" class="form-label">Только бесплатные</label>
+                    <select class="form-select" id="free-filter">
+                        <option value="">Все</option>
+                        <option value="true">Да</option>
+                        <option value="false">Нет</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="lighting-filter" class="form-label">С освещением</label>
+                    <select class="form-select" id="lighting-filter">
+                        <option value="">Все</option>
+                        <option value="true">Да</option>
+                        <option value="false">Нет</option>
+                    </select>
                 </div>
             </div>
         </div>
+
+        <div id="map"></div>
+
+        <div class="court-info mt-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3><i class="fas fa-list"></i> Список площадок</h3>
+                <div class="input-group" style="max-width: 300px;">
+                    <input type="text" class="form-control" id="court-search-input" placeholder="Поиск по названию или адресу...">
+                    <button class="btn btn-outline-secondary" type="button" id="court-search-button">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="courts-list">
+                <!-- Список площадок будет загружен через JavaScript -->
+            </div>
+        </div>
     </div>
+</div>
+{% endblock %}
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Yandex.Maps API -->
-    <script src="https://api-maps.yandex.ru/2.1/?apikey=131116f7-f47e-4295-b369-53b193e0ce23&lang=ru_RU"></script>
-    <script>
-        let myMap;
-        let allCourts = [];
-        let placemarks = [];
+{% block extra_scripts %}
+<!-- Yandex.Maps API -->
+<script src="https://api-maps.yandex.ru/2.1/?apikey=131116f7-f47e-4295-b369-53b193e0ce23&lang=ru_RU"></script>
+<script>
+    let myMap;
+    let allCourts = [];
+    let placemarks = [];
 
-        // Инициализация карты
-        ymaps.ready(initMap);
+    // Инициализация карты
+    ymaps.ready(initMap);
 
-        async function initMap() {
-            // Создание карты
-            myMap = new ymaps.Map('map', {
-                center: [55.7558, 37.6173], // Москва по умолчанию
-                zoom: 10
-            });
+    async function initMap() {
+        // Создание карты
+        myMap = new ymaps.Map('map', {
+            center: [55.7558, 37.6173], // Москва по умолчанию
+            zoom: 10
+        });
 
-            // Загружаем данные о площадках
-            await loadCourts();
+        // Загружаем данные о площадках
+        await loadCourts();
+    }
+
+    async function loadCourts() {
+        try {
+            // Загружаем данные о площадках через API
+            const response = await fetch('{% url "courts_api" %}');
+            allCourts = await response.json();
+
+            // Обновляем счетчик площадок
+            document.getElementById('total-courts').textContent = allCourts.length;
+
+            // Добавляем метки на карту
+            addPlacemarks(allCourts);
+
+            // Отображаем список площадок
+            displayCourtsList(allCourts);
+
+        } catch (error) {
+            console.error('Ошибка при загрузке данных о площадках:', error);
+
+            // Для демонстрации добавим тестовые данные
+            const mockCourts = [
+                {
+                    id: 1,
+                    name: 'Спортивный комплекс «Олимпийский» Волейбольная площадка',
+                    address: 'ул. Ленинградская, д. 36, стр. 1',
+                    latitude: 55.791353,
+                    longitude: 37.559687,
+                    court_type: 'indoor',
+                    surface: 'parquet',
+                    is_free: true,
+                    is_lighted: true,
+                    has_parking: true,
+                    has_showers: false,
+                    has_locker_rooms: true,
+                    has_equipment_rental: true,
+                    has_cafe: false,
+                    description: 'Крытая волейбольная площадка в спортивном комплексе Олимпийский',
+                    status: 'approved',
+                    price_per_hour: 0,
+                    opening_time: '08:00',
+                    closing_time: '22:00'
+                },
+                {
+                    id: 2,
+                    name: 'Волейбольная площадка в Парке Горького',
+                    address: 'ул. Крымский Вал, д. 9, стр. 1',
+                    latitude: 55.724441,
+                    longitude: 37.605157,
+                    court_type: 'outdoor',
+                    surface: 'synthetic',
+                    is_free: true,
+                    is_lighted: false,
+                    has_parking: false,
+                    has_showers: false,
+                    has_locker_rooms: false,
+                    has_equipment_rental: false,
+                    has_cafe: false,
+                    description: 'Открытая волейбольная площадка в Парке Горького',
+                    status: 'approved',
+                    price_per_hour: 0,
+                    opening_time: '06:00',
+                    closing_time: '23:00'
+                },
+                {
+                    id: 3,
+                    name: 'Пляжная волейбольная площадка на Красной Пресне',
+                    address: 'ул. Красная Пресня, д. 25',
+                    latitude: 55.764548,
+                    longitude: 37.542274,
+                    court_type: 'beach',
+                    surface: 'sand',
+                    is_free: false,
+                    is_lighted: true,
+                    has_parking: true,
+                    has_showers: true,
+                    has_locker_rooms: true,
+                    has_equipment_rental: true,
+                    has_cafe: true,
+                    description: 'Песчаная пляжная волейбольная площадка',
+                    status: 'approved',
+                    price_per_hour: 500,
+                    opening_time: '09:00',
+                    closing_time: '21:00'
+                },
+                {
+                    id: 4,
+                    name: 'Спортивный центр «Динамо» Волейбольный зал',
+                    address: 'ул. Щукинская, д. 4',
+                    latitude: 55.769505,
+                    longitude: 37.478641,
+                    court_type: 'indoor',
+                    surface: 'parquet',
+                    is_free: false,
+                    is_lighted: true,
+                    has_parking: true,
+                    has_showers: true,
+                    has_locker_rooms: true,
+                    has_equipment_rental: false,
+                    has_cafe: false,
+                    description: 'Крытый волейбольный зал в спортивном центре Динамо',
+                    status: 'approved',
+                    price_per_hour: 800,
+                    opening_time: '07:00',
+                    closing_time: '23:00'
+                }
+            ];
+
+            allCourts = mockCourts;
+            document.getElementById('total-courts').textContent = allCourts.length;
+            addPlacemarks(allCourts);
+            displayCourtsList(allCourts);
         }
+    }
 
-        async function loadCourts() {
-            try {
-                // Загружаем данные о площадках через API
-                const response = await fetch('{% url "courts_api" %}');
-                allCourts = await response.json();
+    function addPlacemarks(courts) {
+        // Удаляем старые метки
+        placemarks.forEach(placemark => myMap.geoObjects.remove(placemark));
+        placemarks = [];
 
-                // Обновляем счетчик площадок
-                document.getElementById('total-courts').textContent = allCourts.length;
-
-                // Добавляем метки на карту
-                addPlacemarks(allCourts);
-
-                // Отображаем список площадок
-                displayCourtsList(allCourts);
-
-            } catch (error) {
-                console.error('Ошибка при загрузке данных о площадках:', error);
-
-                // Для демонстрации добавим тестовые данные
-                const mockCourts = [
+        // Добавляем новые метки
+        courts.forEach(court => {
+            if (court.latitude && court.longitude) {
+                const placemark = new ymaps.Placemark(
+                    [court.latitude, court.longitude],
                     {
-                        id: 1,
-                        name: 'Спортивный комплекс «Олимпийский» Волейбольная площадка',
-                        address: 'ул. Ленинградская, д. 36, стр. 1',
-                        latitude: 55.791353,
-                        longitude: 37.559687,
-                        court_type: 'indoor',
-                        surface: 'parquet',
-                        is_free: true,
-                        is_lighted: true,
-                        has_parking: true,
-                        has_showers: false,
-                        has_locker_rooms: true,
-                        has_equipment_rental: true,
-                        has_cafe: false,
-                        description: 'Крытая волейбольная площадка в спортивном комплексе Олимпийский',
-                        status: 'approved',
-                        price_per_hour: 0,
-                        opening_time: '08:00',
-                        closing_time: '22:00'
+                        hintContent: court.name,
+                        balloonContent: `
+                            <div style="font-weight: bold; margin-bottom: 10px;">${court.name}</div>
+                            <div><i class="fas fa-map-marker-alt"></i> ${court.address}</div>
+                            <div><i class="fas fa-building"></i> ${getCourtTypeLabel(court.court_type)}</div>
+                            <div><i class="fas fa-ruler-combined"></i> ${getSurfaceLabel(court.surface)}</div>
+                            <div><i class="fas fa-tag"></i> ${court.is_free ? 'Бесплатно' : `₽${court.price_per_hour}/час`}</div>
+                            <div><i class="fas fa-clock"></i> ${court.opening_time} - ${court.closing_time}</div>
+                        `
                     },
                     {
-                        id: 2,
-                        name: 'Волейбольная площадка в Парке Горького',
-                        address: 'ул. Крымский Вал, д. 9, стр. 1',
-                        latitude: 55.724441,
-                        longitude: 37.605157,
-                        court_type: 'outdoor',
-                        surface: 'synthetic',
-                        is_free: true,
-                        is_lighted: false,
-                        has_parking: false,
-                        has_showers: false,
-                        has_locker_rooms: false,
-                        has_equipment_rental: false,
-                        has_cafe: false,
-                        description: 'Открытая волейбольная площадка в Парке Горького',
-                        status: 'approved',
-                        price_per_hour: 0,
-                        opening_time: '06:00',
-                        closing_time: '23:00'
-                    },
-                    {
-                        id: 3,
-                        name: 'Пляжная волейбольная площадка на Красной Пресне',
-                        address: 'ул. Красная Пресня, д. 25',
-                        latitude: 55.764548,
-                        longitude: 37.542274,
-                        court_type: 'beach',
-                        surface: 'sand',
-                        is_free: false,
-                        is_lighted: true,
-                        has_parking: true,
-                        has_showers: true,
-                        has_locker_rooms: true,
-                        has_equipment_rental: true,
-                        has_cafe: true,
-                        description: 'Песчаная пляжная волейбольная площадка',
-                        status: 'approved',
-                        price_per_hour: 500,
-                        opening_time: '09:00',
-                        closing_time: '21:00'
-                    },
-                    {
-                        id: 4,
-                        name: 'Спортивный центр «Динамо» Волейбольный зал',
-                        address: 'ул. Щукинская, д. 4',
-                        latitude: 55.769505,
-                        longitude: 37.478641,
-                        court_type: 'indoor',
-                        surface: 'parquet',
-                        is_free: false,
-                        is_lighted: true,
-                        has_parking: true,
-                        has_showers: true,
-                        has_locker_rooms: true,
-                        has_equipment_rental: false,
-                        has_cafe: false,
-                        description: 'Крытый волейбольный зал в спортивном центре Динамо',
-                        status: 'approved',
-                        price_per_hour: 800,
-                        opening_time: '07:00',
-                        closing_time: '23:00'
+                        preset: getCourtIconPreset(court.court_type)
                     }
-                ];
+                );
 
-                allCourts = mockCourts;
-                document.getElementById('total-courts').textContent = allCourts.length;
-                addPlacemarks(allCourts);
-                displayCourtsList(allCourts);
+                // Добавляем обработчик клика для центрирования карты
+                placemark.events.add('click', () => {
+                    myMap.setCenter([court.latitude, court.longitude], 15);
+                });
+
+                myMap.geoObjects.add(placemark);
+                placemarks.push(placemark);
             }
+        });
+    }
+
+    function displayCourtsList(courts) {
+        const container = document.getElementById('courts-list');
+        container.innerHTML = '';
+
+        if (courts.length === 0) {
+            container.innerHTML = '<p class="text-muted">Площадки не найдены</p>';
+            return;
         }
 
-        function addPlacemarks(courts) {
-            // Удаляем старые метки
-            placemarks.forEach(placemark => myMap.geoObjects.remove(placemark));
-            placemarks = [];
+        courts.forEach(court => {
+            const courtCard = document.createElement('div');
+            courtCard.className = 'court-card';
+            courtCard.dataset.courtName = court.name.toLowerCase();
+            courtCard.dataset.courtAddress = court.address.toLowerCase();
 
-            // Добавляем новые метки
-            courts.forEach(court => {
-                if (court.latitude && court.longitude) {
-                    const placemark = new ymaps.Placemark(
-                        [court.latitude, court.longitude],
-                        {
-                            hintContent: court.name,
-                            balloonContent: `
-                                <div style="font-weight: bold; margin-bottom: 10px;">${court.name}</div>
-                                <div><i class="fas fa-map-marker-alt"></i> ${court.address}</div>
-                                <div><i class="fas fa-building"></i> ${getCourtTypeLabel(court.court_type)}</div>
-                                <div><i class="fas fa-ruler-combined"></i> ${getSurfaceLabel(court.surface)}</div>
-                                <div><i class="fas fa-tag"></i> ${court.is_free ? 'Бесплатно' : `₽${court.price_per_hour}/час`}</div>
-                                <div><i class="fas fa-clock"></i> ${court.opening_time} - ${court.closing_time}</div>
-                            `
-                        },
-                        {
-                            preset: getCourtIconPreset(court.court_type)
-                        }
-                    );
-
-                    // Добавляем обработчик клика для центрирования карты
-                    placemark.events.add('click', () => {
-                        myMap.setCenter([court.latitude, court.longitude], 15);
-                    });
-
-                    myMap.geoObjects.add(placemark);
-                    placemarks.push(placemark);
-                }
-            });
-        }
-
-        function displayCourtsList(courts) {
-            const container = document.getElementById('courts-list');
-            container.innerHTML = '';
-
-            if (courts.length === 0) {
-                container.innerHTML = '<p class="text-muted">Площадки не найдены</p>';
-                return;
-            }
-
-            courts.forEach(court => {
-                const courtCard = document.createElement('div');
-                courtCard.className = 'court-card';
-                courtCard.dataset.courtName = court.name.toLowerCase();
-                courtCard.dataset.courtAddress = court.address.toLowerCase();
-
-                courtCard.innerHTML = `
-                    <div class="d-flex justify-content-between align-items-start">
+            courtCard.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h5>${court.name}</h5>
+                        <p class="text-muted mb-1"><i class="fas fa-map-marker-alt"></i> ${court.address}</p>
                         <div>
-                            <h5>${court.name}</h5>
-                            <p class="text-muted mb-1"><i class="fas fa-map-marker-alt"></i> ${court.address}</p>
-                            <div>
-                                <span class="court-type-badge ${court.court_type}">${getCourtTypeLabel(court.court_type)}</span>
-                                <span class="court-status-badge ${court.status}">${getStatusLabel(court.status)}</span>
-                            </div>
-                        </div>
-                        <div class="text-end">
-                            <div><strong>${court.is_free ? 'Бесплатно' : `₽${court.price_per_hour}/час`}</strong></div>
-                            <div class="text-muted">${court.opening_time} - ${court.closing_time}</div>
+                            <span class="court-type-badge ${court.court_type}">${getCourtTypeLabel(court.court_type)}</span>
+                            <span class="court-status-badge ${court.status}">${getStatusLabel(court.status)}</span>
                         </div>
                     </div>
-                    <p>${court.description}</p>
-                    <div class="amenities-list">
-                        ${court.is_lighted ? '<span class="amenity-item"><i class="fas fa-lightbulb"></i> Освещение</span>' : ''}
-                        ${court.has_parking ? '<span class="amenity-item"><i class="fas fa-car"></i> Парковка</span>' : ''}
-                        ${court.has_showers ? '<span class="amenity-item"><i class="fas fa-shower"></i> Душ</span>' : ''}
-                        ${court.has_locker_rooms ? '<span class="amenity-item"><i class="fas fa-tshirt"></i> Раздевалки</span>' : ''}
-                        ${court.has_equipment_rental ? '<span class="amenity-item"><i class="fas fa-volleyball-ball"></i> Прокат</span>' : ''}
-                        ${court.has_cafe ? '<span class="amenity-item"><i class="fas fa-utensils"></i> Кафе</span>' : ''}
+                    <div class="text-end">
+                        <div><strong>${court.is_free ? 'Бесплатно' : `₽${court.price_per_hour}/час`}</strong></div>
+                        <div class="text-muted">${court.opening_time} - ${court.closing_time}</div>
                     </div>
-                    <div class="mt-2">
-                        <button class="btn btn-sm btn-outline-primary" onclick="centerMapOnCourt(${court.latitude}, ${court.longitude})">
-                            <i class="fas fa-map-marker-alt"></i> Показать на карте
-                        </button>
-                        <a href="#" onclick="goToCourtDetails(${court.id}); return false;" class="btn btn-sm btn-outline-secondary">
-                            <i class="fas fa-info-circle"></i> Подробнее
-                        </a>
-                    </div>
-                `;
+                </div>
+                <p>${court.description}</p>
+                <div class="amenities-list">
+                    ${court.is_lighted ? '<span class="amenity-item"><i class="fas fa-lightbulb"></i> Освещение</span>' : ''}
+                    ${court.has_parking ? '<span class="amenity-item"><i class="fas fa-car"></i> Парковка</span>' : ''}
+                    ${court.has_showers ? '<span class="amenity-item"><i class="fas fa-shower"></i> Душ</span>' : ''}
+                    ${court.has_locker_rooms ? '<span class="amenity-item"><i class="fas fa-tshirt"></i> Раздевалки</span>' : ''}
+                    ${court.has_equipment_rental ? '<span class="amenity-item"><i class="fas fa-volleyball-ball"></i> Прокат</span>' : ''}
+                    ${court.has_cafe ? '<span class="amenity-item"><i class="fas fa-utensils"></i> Кафе</span>' : ''}
+                </div>
+                <div class="mt-2">
+                    <button class="btn btn-sm btn-outline-primary" onclick="centerMapOnCourt(${court.latitude}, ${court.longitude})">
+                        <i class="fas fa-map-marker-alt"></i> Показать на карте
+                    </button>
+                    <a href="#" onclick="goToCourtDetails(${court.id}); return false;" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-info-circle"></i> Подробнее
+                    </a>
+                </div>
+            `;
 
-                container.appendChild(courtCard);
-            });
-        }
-
-        function centerMapOnCourt(lat, lng) {
-            myMap.setCenter([lat, lng], 15);
-        }
-
-        function getCourtTypeLabel(type) {
-            const labels = {
-                'indoor': 'Крытая',
-                'outdoor': 'Открытая',
-                'beach': 'Пляжная'
-            };
-            return labels[type] || type;
-        }
-
-        function getSurfaceLabel(surface) {
-            const labels = {
-                'sand': 'Песок',
-                'parquet': 'Паркет',
-                'synthetic': 'Синтетика',
-                'asphalt': 'Асфальт',
-                'grass': 'Газон'
-            };
-            return labels[surface] || surface;
-        }
-
-        function getStatusLabel(status) {
-            const labels = {
-                'approved': 'Одобрено',
-                'pending': 'На модерации',
-                'rejected': 'Отклонено'
-            };
-            return labels[status] || status;
-        }
-
-        function getCourtIconPreset(type) {
-            const presets = {
-                'indoor': 'islands#blueSportIcon',
-                'outdoor': 'islands#greenSportIcon',
-                'beach': 'islands#orangeSportIcon'
-            };
-            return presets[type] || 'islands#blueSportIcon';
-        }
-
-        // Фильтрация площадок
-        function applyFilters() {
-            const typeFilter = document.getElementById('court-type-filter').value;
-            const surfaceFilter = document.getElementById('surface-filter').value;
-            const freeFilter = document.getElementById('free-filter').value;
-            const lightingFilter = document.getElementById('lighting-filter').value;
-
-            let filteredCourts = [...allCourts];
-
-            if (typeFilter) {
-                filteredCourts = filteredCourts.filter(court => court.court_type === typeFilter);
-            }
-
-            if (surfaceFilter) {
-                filteredCourts = filteredCourts.filter(court => court.surface === surfaceFilter);
-            }
-
-            if (freeFilter !== '') {
-                const isFree = freeFilter === 'true';
-                filteredCourts = filteredCourts.filter(court => court.is_free === isFree);
-            }
-
-            if (lightingFilter !== '') {
-                const hasLighting = lightingFilter === 'true';
-                filteredCourts = filteredCourts.filter(court => court.is_lighted === hasLighting);
-            }
-
-            // Обновляем отображение
-            addPlacemarks(filteredCourts);
-            displayCourtsList(filteredCourts);
-            document.getElementById('total-courts').textContent = filteredCourts.length;
-        }
-
-        // Добавляем обработчики для фильтров
-        document.getElementById('court-type-filter').addEventListener('change', applyFilters);
-        document.getElementById('surface-filter').addEventListener('change', applyFilters);
-        document.getElementById('free-filter').addEventListener('change', applyFilters);
-        document.getElementById('lighting-filter').addEventListener('change', applyFilters);
-
-        // Функция перехода к странице деталей площадки
-        function goToCourtDetails(courtId) {
-            window.location.href = `/court/${courtId}/`;
-        }
-
-        // Добавляем обработчик для поиска в списке площадок
-        document.getElementById('court-search-button').addEventListener('click', function() {
-            const searchTerm = document.getElementById('court-search-input').value.toLowerCase();
-            filterCourtsList(searchTerm);
+            container.appendChild(courtCard);
         });
+    }
 
-        document.getElementById('court-search-input').addEventListener('input', function() {
-            const searchTerm = this.value.toLowerCase();
-            filterCourtsList(searchTerm);
-        });
+    function centerMapOnCourt(lat, lng) {
+        myMap.setCenter([lat, lng], 15);
+    }
 
-        function filterCourtsList(searchTerm) {
-            const courtCards = document.querySelectorAll('#courts-list .court-card');
+    function getCourtTypeLabel(type) {
+        const labels = {
+            'indoor': 'Крытая',
+            'outdoor': 'Открытая',
+            'beach': 'Пляжная'
+        };
+        return labels[type] || type;
+    }
 
-            courtCards.forEach(card => {
-                const courtName = card.dataset.courtName;
-                const courtAddress = card.dataset.courtAddress;
+    function getSurfaceLabel(surface) {
+        const labels = {
+            'sand': 'Песок',
+            'parquet': 'Паркет',
+            'synthetic': 'Синтетика',
+            'asphalt': 'Асфальт',
+            'grass': 'Газон'
+        };
+        return labels[surface] || surface;
+    }
 
-                // Проверяем, соответствует ли площадка поисковому запросу
-                const matchesSearch = !searchTerm ||
-                                     courtName.includes(searchTerm) ||
-                                     courtAddress.includes(searchTerm);
+    function getStatusLabel(status) {
+        const labels = {
+            'approved': 'Одобрено',
+            'pending': 'На модерации',
+            'rejected': 'Отклонено'
+        };
+        return labels[status] || status;
+    }
 
-                if (matchesSearch) {
-                    card.style.display = 'block';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
+    function getCourtIconPreset(type) {
+        const presets = {
+            'indoor': 'islands#blueSportIcon',
+            'outdoor': 'islands#greenSportIcon',
+            'beach': 'islands#orangeSportIcon'
+        };
+        return presets[type] || 'islands#blueSportIcon';
+    }
+
+    // Фильтрация площадок
+    function applyFilters() {
+        const typeFilter = document.getElementById('court-type-filter').value;
+        const surfaceFilter = document.getElementById('surface-filter').value;
+        const freeFilter = document.getElementById('free-filter').value;
+        const lightingFilter = document.getElementById('lighting-filter').value;
+
+        let filteredCourts = [...allCourts];
+
+        if (typeFilter) {
+            filteredCourts = filteredCourts.filter(court => court.court_type === typeFilter);
         }
-    </script>
-</body>
-</html>
+
+        if (surfaceFilter) {
+            filteredCourts = filteredCourts.filter(court => court.surface === surfaceFilter);
+        }
+
+        if (freeFilter !== '') {
+            const isFree = freeFilter === 'true';
+            filteredCourts = filteredCourts.filter(court => court.is_free === isFree);
+        }
+
+        if (lightingFilter !== '') {
+            const hasLighting = lightingFilter === 'true';
+            filteredCourts = filteredCourts.filter(court => court.is_lighted === hasLighting);
+        }
+
+        // Обновляем отображение
+        addPlacemarks(filteredCourts);
+        displayCourtsList(filteredCourts);
+        document.getElementById('total-courts').textContent = filteredCourts.length;
+    }
+
+    // Добавляем обработчики для фильтров
+    document.getElementById('court-type-filter').addEventListener('change', applyFilters);
+    document.getElementById('surface-filter').addEventListener('change', applyFilters);
+    document.getElementById('free-filter').addEventListener('change', applyFilters);
+    document.getElementById('lighting-filter').addEventListener('change', applyFilters);
+
+    // Функция перехода к странице деталей площадки
+    function goToCourtDetails(courtId) {
+        window.location.href = `/court/${courtId}/`;
+    }
+
+    // Добавляем обработчик для поиска в списке площадок
+    document.getElementById('court-search-button').addEventListener('click', function() {
+        const searchTerm = document.getElementById('court-search-input').value.toLowerCase();
+        filterCourtsList(searchTerm);
+    });
+
+    document.getElementById('court-search-input').addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        filterCourtsList(searchTerm);
+    });
+
+    function filterCourtsList(searchTerm) {
+        const courtCards = document.querySelectorAll('#courts-list .court-card');
+
+        courtCards.forEach(card => {
+            const courtName = card.dataset.courtName;
+            const courtAddress = card.dataset.courtAddress;
+
+            // Проверяем, соответствует ли площадка поисковому запросу
+            const matchesSearch = !searchTerm ||
+                                 courtName.includes(searchTerm) ||
+                                 courtAddress.includes(searchTerm);
+
+            if (matchesSearch) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+</script>
+{% endblock %}
+

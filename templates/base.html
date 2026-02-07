@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -6,8 +7,9 @@
     <title>{% block title %}Волейбольный клуб{% endblock %}</title>
 
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="icon" type="image/webp" href="/media/logovol.webp">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="icon" type="image/webp" href="{% static 'img/favicon.webp' %}">
+    <link rel="shortcut icon" type="image/webp" href="{% static 'img/favicon.webp' %}">
     <style>
         * {
             margin: 0;
@@ -168,7 +170,6 @@
             text-decoration: none;
             white-space: nowrap;
             vertical-align: middle;
-        }
         }
 
         .btn-join:hover {
@@ -509,8 +510,10 @@
             color: #cbd5e0;
         }
     </style>
+    {% block extra_head %}{% endblock %}
 </head>
 <body>
+{% block body %}
 
     <!-- Всплывающий баннер -->
     <div class="scroll-hide-banner hidden" id="scrollBanner">
@@ -663,8 +666,10 @@
         </p>
     </div>
 
+{% endblock %}
+
     <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
         // Инициализация при загрузке
@@ -672,65 +677,70 @@
             console.log('Волейбольный клуб загружен');
         });
 
-        let lastScrollTop = 0;
-        let bannerHidden = false;
-        const banner = document.getElementById('scrollBanner');
+        (function initScrollBanner() {
+          const banner = document.getElementById('scrollBanner');
+          if (!banner) return;
 
-        // Показываем баннер через 2 секунды после загрузки
-        setTimeout(() => {
-          banner.classList.remove('hidden');
-          bannerHidden = false;
-          document.body.style.paddingTop = '120px'; // Устанавливаем отступ сразу после показа баннера
-        }, 2000);
+          let lastScrollTop = 0;
+          let bannerHidden = banner.classList.contains('hidden');
 
-        window.addEventListener('scroll', function() {
-          const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+          // Показываем баннер через 2 секунды после загрузки
+          setTimeout(() => {
+            banner.classList.remove('hidden');
+            bannerHidden = false;
+            document.body.style.paddingTop = '120px'; // Устанавливаем отступ сразу после показа баннера
+          }, 2000);
 
-          // Прячем баннер при скролле вниз
-          if (scrollTop > lastScrollTop && scrollTop > 50) {
-            if (!bannerHidden && !banner.classList.contains('hidden')) {
-              banner.classList.add('hidden');
-              bannerHidden = true;
-              document.body.style.paddingTop = '20px'; // Уменьшаем отступ при скрытии
-            }
-          }
-          // Показываем при скролле вверх
-          else if (scrollTop < lastScrollTop && scrollTop > 50) {
-            if (bannerHidden) {
-              banner.classList.remove('hidden');
-              bannerHidden = false;
-              document.body.style.paddingTop = '120px'; // Увеличиваем отступ при показе
-            }
-          }
+          window.addEventListener('scroll', function() {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
 
-          // Обновляем последнюю позицию скролла
-          lastScrollTop = Math.max(0, scrollTop); // Предотвращаем отрицательные значения
-        });
-
-        // Функция для закрытия банера
-        function closeBanner() {
-          banner.classList.add('hidden');
-          bannerHidden = true;
-          document.body.style.paddingTop = '20px'; // Убираем отступ если баннер закрыт
-        }
-
-        // Обновляем отступ тела документа при показе/скрытии баннера
-        const observer = new MutationObserver(function(mutations) {
-          mutations.forEach(function(mutation) {
-            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-              if (banner.classList.contains('hidden')) {
-                document.body.style.paddingTop = '20px';
-              } else {
-                document.body.style.paddingTop = '120px';
+            // Прячем баннер при скролле вниз
+            if (scrollTop > lastScrollTop && scrollTop > 50) {
+              if (!bannerHidden && !banner.classList.contains('hidden')) {
+                banner.classList.add('hidden');
+                bannerHidden = true;
+                document.body.style.paddingTop = '20px'; // Уменьшаем отступ при скрытии
               }
             }
-          });
-        });
+            // Показываем при скролле вверх
+            else if (scrollTop < lastScrollTop && scrollTop > 50) {
+              if (bannerHidden) {
+                banner.classList.remove('hidden');
+                bannerHidden = false;
+                document.body.style.paddingTop = '120px'; // Увеличиваем отступ при показе
+              }
+            }
 
-        observer.observe(banner, {
-          attributes: true,
-          attributeFilter: ['class']
-        });
+            // Обновляем последнюю позицию скролла
+            lastScrollTop = Math.max(0, scrollTop); // Предотвращаем отрицательные значения
+          });
+
+          // Функция для закрытия баннера
+          window.closeBanner = function closeBanner() {
+            banner.classList.add('hidden');
+            bannerHidden = true;
+            document.body.style.paddingTop = '20px'; // Убираем отступ если баннер закрыт
+          };
+
+          // Обновляем отступ тела документа при показе/скрытии баннера
+          const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+              if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                if (banner.classList.contains('hidden')) {
+                  document.body.style.paddingTop = '20px';
+                } else {
+                  document.body.style.paddingTop = '120px';
+                }
+              }
+            });
+          });
+
+          observer.observe(banner, {
+            attributes: true,
+            attributeFilter: ['class']
+          });
+        })();
     </script>
+    {% block extra_scripts %}{% endblock %}
 </body>
 </html>
