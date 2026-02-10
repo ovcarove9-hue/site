@@ -303,6 +303,9 @@
                     <button type="button" class="btn btn-outline-secondary" onclick="resetForm()">
                         <i class="fas fa-redo"></i> Сбросить
                     </button>
+                    <a href="{% url 'friend_requests' %}" class="btn btn-warning">
+                        <i class="fas fa-bell"></i> Заявки ({{ received_requests|length }})
+                    </a>
                     <a href="{% url 'home' %}" class="btn btn-outline-primary">
                         <i class="fas fa-home"></i> На главную
                     </a>
@@ -396,9 +399,31 @@
                                 </p>
                             {% endif %}
 
-                            <a href="{% url 'profile' profile.user.id %}" class="action-btn btn-view">
-                                <i class="fas fa-eye"></i> Просмотреть профиль
-                            </a>
+                            <div class="d-flex flex-column gap-2">
+                                <a href="{% url 'profile' profile.user.id %}" class="action-btn btn-view">
+                                    <i class="fas fa-eye"></i> Просмотреть профиль
+                                </a>
+
+                                {% if user.is_authenticated and user != profile.user %}
+                                    {% if profile.user.id in friends_list %}
+                                        <button class="action-btn btn-secondary" disabled>
+                                            <i class="fas fa-user-check"></i> Друг
+                                        </button>
+                                    {% elif profile.user.id in sent_requests %}
+                                        <button class="action-btn btn-warning" disabled>
+                                            <i class="fas fa-clock"></i> Запрос отправлен
+                                        </button>
+                                    {% elif profile.user.id in received_requests %}
+                                        <button class="action-btn btn-success" disabled>
+                                            <i class="fas fa-user-plus"></i> Заявка в друзья
+                                        </button>
+                                    {% else %}
+                                        <button class="action-btn btn-primary" onclick="sendFriendRequest({{ profile.user.id }})">
+                                            <i class="fas fa-user-plus"></i> Добавить в друзья
+                                        </button>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 {% endfor %}
@@ -473,6 +498,45 @@
             }
         });
     });
+
+    // Функция отправки запроса в друзья
+    function sendFriendRequest(userId) {
+        fetch(`/add-friend/${userId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Запрос в друзья отправлен!');
+                location.reload();
+            } else {
+                alert('Ошибка: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Ошибка сети');
+        });
+    }
+
+    // Функция получения CSRF-токена
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
 </script>
 {% endblock %}
 

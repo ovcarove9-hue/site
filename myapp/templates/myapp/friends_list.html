@@ -1,0 +1,460 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    body {
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%);
+        background-attachment: fixed;
+        min-height: 100vh;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+        padding: 20px;
+    }
+
+    .friends-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(10px);
+        border-radius: 24px;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .friends-header {
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        color: white;
+        padding: 2.5rem;
+        text-align: center;
+    }
+
+    .friends-header h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .friends-header .subtitle {
+        font-size: 1.1rem;
+        opacity: 0.9;
+    }
+
+    .stats-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        padding: 2rem;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        border: 2px solid #e2e8f0;
+    }
+
+    .stat-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        color: #4f46e5;
+    }
+
+    .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        display: block;
+        color: #1e293b;
+    }
+
+    .stat-label {
+        color: #64748b;
+        font-size: 0.9rem;
+    }
+
+    .friends-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1.5rem;
+        padding: 2rem;
+    }
+
+    .friend-card {
+        background: white;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        border: 1px solid #e2e8f0;
+        transition: all 0.3s;
+    }
+
+    .friend-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        border-color: #4f46e5;
+    }
+
+    .friend-header {
+        background: linear-gradient(90deg, #f0f9ff, #e0f2fe);
+        padding: 1.5rem;
+        text-align: center;
+        position: relative;
+    }
+
+    .friend-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        border: 4px solid white;
+        margin: 0 auto 1rem;
+        overflow: hidden;
+        background: #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .friend-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .friend-avatar i {
+        font-size: 2.5rem;
+        color: #94a3b8;
+    }
+
+    .friend-status {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #22c55e;
+        border: 2px solid white;
+    }
+
+    .friend-status.offline {
+        background: #94a3b8;
+    }
+
+    .friend-body {
+        padding: 1.5rem;
+    }
+
+    .friend-name {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+        text-align: center;
+    }
+
+    .friend-location {
+        color: #64748b;
+        font-size: 0.9rem;
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+
+    .friend-info {
+        margin-bottom: 1rem;
+    }
+
+    .info-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .info-label {
+        color: #64748b;
+    }
+
+    .info-value {
+        font-weight: 500;
+    }
+
+    .friend-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .action-btn {
+        flex: 1;
+        padding: 0.5rem;
+        border: none;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.3s;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .btn-message {
+        background: #4f46e5;
+        color: white;
+    }
+
+    .btn-message:hover {
+        background: #4338ca;
+    }
+
+    .btn-remove {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+
+    .btn-remove:hover {
+        background: #fecaca;
+    }
+
+    .pagination-container {
+        padding: 2rem;
+        display: flex;
+        justify-content: center;
+    }
+
+    .no-friends {
+        text-align: center;
+        padding: 3rem;
+        color: #64748b;
+    }
+
+    .no-friends-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        color: #cbd5e1;
+    }
+
+    .nav-buttons {
+        display: flex;
+        gap: 1rem;
+        margin: 2rem;
+        justify-content: center;
+    }
+
+    .nav-btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 12px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.3s;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    }
+
+    .btn-outline {
+        background: transparent;
+        color: #4f46e5;
+        border: 2px solid #4f46e5;
+    }
+
+    .btn-outline:hover {
+        background: #4f46e5;
+        color: white;
+    }
+
+    @media (max-width: 768px) {
+        .friends-container {
+            margin: 0;
+            border-radius: 0;
+        }
+
+        .friends-grid {
+            grid-template-columns: 1fr;
+            padding: 1rem;
+        }
+
+        .stats-cards {
+            grid-template-columns: 1fr;
+            padding: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="friends-container">
+    <!-- Заголовок -->
+    <div class="friends-header">
+        <h1><i class="fas fa-user-friends"></i> Мои друзья</h1>
+        <div class="subtitle">Список ваших друзей в волейбольном сообществе</div>
+    </div>
+
+    <!-- Статистика -->
+    <div class="stats-cards">
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-users"></i>
+            </div>
+            <span class="stat-number">{{ friends_count }}</span>
+            <span class="stat-label">Всего друзей</span>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-volleyball-ball"></i>
+            </div>
+            <span class="stat-number">{{ friends_with_games_count|default:0 }}</span>
+            <span class="stat-label">Играют в волейбол</span>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-map-marker-alt"></i>
+            </div>
+            <span class="stat-number">{{ friends_in_city_count|default:0 }}</span>
+            <span class="stat-label">В вашем городе</span>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-clock"></i>
+            </div>
+            <span class="stat-number">{{ friends_online_count|default:0 }}</span>
+            <span class="stat-label">Онлайн сейчас</span>
+        </div>
+    </div>
+
+    <!-- Список друзей -->
+    <div class="section">
+        {% if page_obj %}
+            <div class="friends-grid">
+                {% for friend in page_obj %}
+                    <div class="friend-card">
+                        <div class="friend-header">
+                            <div class="friend-avatar">
+                                {% if friend.profile.avatar %}
+                                    <img src="{{ friend.profile.avatar.url }}" alt="{{ friend.username }}" style="width:100%;height:100%;object-fit:cover;">
+                                {% else %}
+                                    <i class="fas fa-user"></i>
+                                {% endif %}
+                            </div>
+                            <div class="friend-status {% if friend.profile.is_online|default:False %}online{% else %}offline{% endif %}"></div>
+                            <h3 class="friend-name">{{ friend.get_full_name|default:friend.username }}</h3>
+                            <div class="friend-location">
+                                <i class="fas fa-map-marker-alt"></i>
+                                {{ friend.profile.city|default:"Город не указан" }}
+                            </div>
+                        </div>
+
+                        <div class="friend-body">
+                            <div class="friend-info">
+                                <div class="info-item">
+                                    <span class="info-label">Позиция:</span>
+                                    <span class="info-value">{{ friend.profile.get_position_display|default:"Не указана" }}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Уровень:</span>
+                                    <span class="info-value">{{ friend.profile.get_skill_level_display }}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Стаж:</span>
+                                    <span class="info-value">{{ friend.profile.playing_years|default:0 }} лет</span>
+                                </div>
+                            </div>
+
+                            {% if friend.profile.bio %}
+                                <p class="card-text small text-muted mb-2">
+                                    {{ friend.profile.bio|truncatechars:100 }}
+                                </p>
+                            {% endif %}
+
+                            <div class="friend-actions">
+                                <a href="{% url 'profile' friend.id %}" class="action-btn btn-message">
+                                    <i class="fas fa-eye"></i> Профиль
+                                </a>
+                                <form action="{% url 'remove_friend' friend.id %}" method="post" style="flex:1;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="action-btn btn-remove" onclick="return confirm('Вы уверены, что хотите удалить этого пользователя из друзей?');">
+                                        <i class="fas fa-user-minus"></i> Удалить
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- Пагинация -->
+            {% if page_obj.has_other_pages %}
+                <div class="pagination-container">
+                    <nav aria-label="Навигация">
+                        <ul class="pagination">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if page_obj.number == num %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ num }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="no-friends">
+                <div class="no-friends-icon">
+                    <i class="fas fa-user-friends"></i>
+                </div>
+                <h3>У вас пока нет друзей</h3>
+                <p>Найдите других волейболистов и добавьте их в друзья!</p>
+                <a href="{% url 'search' %}" class="btn btn-primary mt-3">
+                    <i class="fas fa-search"></i> Найти друзей
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Навигационные кнопки -->
+    <div class="nav-buttons">
+        <a href="{% url 'friend_requests' %}" class="nav-btn btn-primary">
+            <i class="fas fa-bell"></i> Заявки в друзья
+        </a>
+        <a href="{% url 'search' %}" class="nav-btn btn-outline">
+            <i class="fas fa-search"></i> Найти новых друзей
+        </a>
+        <a href="{% url 'home' %}" class="nav-btn btn-outline">
+            <i class="fas fa-home"></i> На главную
+        </a>
+    </div>
+</div>
+{% endblock %}

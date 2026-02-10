@@ -1515,48 +1515,92 @@ def search_players(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
+    # Получаем ID друзей текущего пользователя
+    friends_list = []
+    sent_requests = []
+    received_requests = []
+
+    if request.user.is_authenticated:
+        # Список друзей (принятые запросы)
+        friends = Friendship.objects.filter(
+            (Q(from_user=request.user) | Q(to_user=request.user)),
+            status='accepted'
+        )
+
+        friends_list = []
+        for friendship in friends:
+            friend_id = friendship.to_user.id if friendship.from_user == request.user else friendship.from_user.id
+            friends_list.append(friend_id)
+
+        # Исходящие запросы
+        sent_requests = list(Friendship.objects.filter(
+            from_user=request.user,
+            status='pending'
+        ).values_list('to_user_id', flat=True))
+
+        # Входящие запросы
+        received_requests = list(Friendship.objects.filter(
+            to_user=request.user,
+            status='pending'
+        ).values_list('from_user_id', flat=True))
+
     context = {
         'page_title': 'Поиск игроков',
         'form': form,
         'page_obj': page_obj,
         'results_count': len(results),
+        'friends_list': friends_list,
+        'sent_requests': sent_requests,
+        'received_requests': received_requests,
     }
-    
+
     return render(request, 'myapp/search.html', context)
 
 @login_required
 def profile(request, user_id):
     """Просмотр профиля пользователя"""
-    
+
     user = get_object_or_404(User, id=user_id, is_active=True)
     profile = get_object_or_404(UserProfile, user=user)
-    
+
     # Проверяем дружбу
     is_friend = False
     friendship_status = None
-    
+
     if request.user.is_authenticated and request.user != user:
         friendship = Friendship.objects.filter(
             (Q(from_user=request.user) & Q(to_user=user)) |
             (Q(from_user=user) & Q(to_user=request.user))
         ).first()
-        
+
         if friendship:
             is_friend = friendship.status == 'accepted'
             friendship_status = friendship.status
-    
+
     # Игры пользователя
     organized_games = Game.objects.filter(
         organizer=user,
         is_active=True
     ).order_by('-game_date')[:5]
-    
+
     # Бронирования пользователя
     recent_bookings = CourtBooking.objects.filter(
         user=user,
         booking_date__gte=timezone.now().date()
     ).order_by('booking_date', 'start_time')[:3]
-    
+
+    # Получаем друзей пользователя
+    friends = User.objects.filter(
+        Q(friendships_sent__to_user=user, friendships_sent__status='accepted') |
+        Q(friendships_received__from_user=user, friendships_received__status='accepted')
+    ).distinct().order_by('username')[:9]  # Ограничиваем первые 9 друзей для отображения
+
+    # Получаем общее количество друзей
+    friends_count = User.objects.filter(
+        Q(friendships_sent__to_user=user, friendships_sent__status='accepted') |
+        Q(friendships_received__from_user=user, friendships_received__status='accepted')
+    ).distinct().count()
+
     context = {
         'page_title': f'Профиль: {user.username}',
         'profile_user': user,
@@ -1565,9 +1609,12 @@ def profile(request, user_id):
         'friendship_status': friendship_status,
         'organized_games': organized_games,
         'recent_bookings': recent_bookings,
-        'is_own_profile': request.user == user,  # Это уже есть
+        'is_own_profile': request.user == user,
+        'friends': friends,
+        'friends_count': friends_count,
+        'all_friends': friends,  # для модального окна
     }
-    
+
     return render(request, 'myapp/profile.html', context)
 
 @login_required
@@ -1594,17 +1641,65 @@ def friends_list(request, user_id=None):
             status='pending'
         ).select_related('from_user')
     
+    # Добавляем пагинацию для друзей
+    from django.core.paginator import Paginator
+    paginator = Paginator(friends, 12)  # 12 друзей на страницу
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    # Дополнительная статистика
+    friends_with_games_count = friends.filter(games_joined__isnull=False).distinct().count()
+    friends_in_city_count = friends.filter(profile__city=user.profile.city).count() if hasattr(user, 'profile') and user.profile.city else 0
+    # Для простоты считаем, что все друзья онлайн (в реальном приложении это было бы по сессиям)
+    friends_online_count = friends.count()  # условно
+
     context = {
         'page_title': f'Друзья {user.username}',
         'profile_user': user,
         'profile': profile,
-        'friends': friends,
+        'friends': page_obj,  # передаем постранично
         'friends_count': friends.count(),
         'friend_requests': friend_requests,
         'is_own_profile': request.user == user,
+        'page_obj': page_obj,
+        'friends_with_games_count': friends_with_games_count,
+        'friends_in_city_count': friends_in_city_count,
+        'friends_online_count': friends_online_count,
     }
-    
+
     return render(request, 'myapp/friends_list.html', context)
+
+@login_required
+def friend_requests(request):
+    """Управление заявками в друзья"""
+
+    # Получаем входящие заявки
+    incoming_requests = Friendship.objects.filter(
+        to_user=request.user,
+        status='pending'
+    ).select_related('from_user', 'from_user__profile')
+
+    # Получаем исходящие заявки
+    outgoing_requests = Friendship.objects.filter(
+        from_user=request.user,
+        status='pending'
+    ).select_related('to_user', 'to_user__profile')
+
+    # Получаем список друзей
+    friends = User.objects.filter(
+        Q(friendships_sent__to_user=request.user, friendships_sent__status='accepted') |
+        Q(friendships_received__from_user=request.user, friendships_received__status='accepted')
+    ).distinct().order_by('username')
+
+    context = {
+        'page_title': 'Заявки в друзья',
+        'incoming_requests': incoming_requests,
+        'outgoing_requests': outgoing_requests,
+        'friends': friends,
+        'friends_count': friends.count(),
+    }
+
+    return render(request, 'myapp/friend_requests.html', context)
 
 @login_required
 def edit_profile(request):
@@ -1656,70 +1751,111 @@ def upload_avatar(request):
 @login_required
 def add_friend(request, user_id):
     """Добавить в друзья"""
-    
-    friend_user = get_object_or_404(User, id=user_id, is_active=True)
-    
-    if request.user == friend_user:
-        messages.error(request, 'Нельзя добавить себя в друзья')
-        return redirect('profile', user_id=user_id)
-    
-    # Проверяем, существует ли уже заявка
-    existing = Friendship.objects.filter(
-        from_user=request.user,
-        to_user=friend_user
-    ).first()
-    
-    if existing:
-        messages.warning(request, 'Заявка уже отправлена')
-    else:
-        Friendship.objects.create(
+
+    if request.method == 'POST':
+        friend_user = get_object_or_404(User, id=user_id, is_active=True)
+
+        if request.user == friend_user:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'Нельзя добавить себя в друзья'})
+            messages.error(request, 'Нельзя добавить себя в друзья')
+            return redirect('profile', user_id=user_id)
+
+        # Проверяем, существует ли уже заявка
+        existing = Friendship.objects.filter(
             from_user=request.user,
-            to_user=friend_user,
-            status='pending'
-        )
-        messages.success(request, f'✅ Заявка в друзья отправлена пользователю {friend_user.username}')
-    
+            to_user=friend_user
+        ).first()
+
+        if existing:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'Заявка уже отправлена'})
+            messages.warning(request, 'Заявка уже отправлена')
+        else:
+            Friendship.objects.create(
+                from_user=request.user,
+                to_user=friend_user,
+                status='pending'
+            )
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': True, 'message': f'Заявка в друзья отправлена пользователю {friend_user.username}'})
+            messages.success(request, f'✅ Заявка в друзья отправлена пользователю {friend_user.username}')
+
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': True, 'message': 'Заявка в друзья отправлена'})
+
+    # Если не POST запрос, перенаправляем на профиль
     return redirect('profile', user_id=user_id)
 
 @login_required
 def accept_friend(request, friendship_id):
     """Принять заявку в друзья"""
-    
-    friendship = get_object_or_404(Friendship, id=friendship_id, to_user=request.user)
-    
-    if friendship.status == 'pending':
-        friendship.status = 'accepted'
-        friendship.save()
-        messages.success(request, f'✅ Вы приняли заявку в друзья от {friendship.from_user.username}')
-    
+
+    if request.method == 'POST':
+        friendship = get_object_or_404(Friendship, id=friendship_id, to_user=request.user)
+
+        if friendship.status == 'pending':
+            friendship.status = 'accepted'
+            friendship.save()
+
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': True, 'message': f'Вы приняли заявку в друзья от {friendship.from_user.username}'})
+            messages.success(request, f'✅ Вы приняли заявку в друзья от {friendship.from_user.username}')
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'Заявка уже обработана'})
+
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': True, 'message': 'Заявка в друзья принята'})
+
     return redirect('profile', user_id=request.user.id)
 
 @login_required
 def reject_friend(request, friendship_id):
     """Отклонить заявку в друзья"""
-    
-    friendship = get_object_or_404(Friendship, id=friendship_id, to_user=request.user)
-    
-    if friendship.status == 'pending':
-        friendship.status = 'rejected'
-        friendship.save()
-        messages.info(request, f'Заявка в друзья от {friendship.from_user.username} отклонена')
-    
+
+    if request.method == 'POST':
+        friendship = get_object_or_404(Friendship, id=friendship_id, to_user=request.user)
+
+        if friendship.status == 'pending':
+            friendship.status = 'rejected'
+            friendship.save()
+
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': True, 'message': f'Заявка в друзья от {friendship.from_user.username} отклонена'})
+            messages.info(request, f'Заявка в друзья от {friendship.from_user.username} отклонена')
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'Заявка уже обработана'})
+
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': True, 'message': 'Заявка в друзья отклонена'})
+
     return redirect('profile', user_id=request.user.id)
 
 @login_required
 def remove_friend(request, user_id):
     """Удалить из друзей"""
-    
-    friend_user = get_object_or_404(User, id=user_id)
-    
-    # Удаляем обе связи
-    Friendship.objects.filter(
-        Q(from_user=request.user, to_user=friend_user) |
-        Q(from_user=friend_user, to_user=request.user)
-    ).delete()
-    
-    messages.info(request, f'Пользователь {friend_user.username} удалён из друзей')
+
+    if request.method == 'POST':
+        friend_user = get_object_or_404(User, id=user_id)
+
+        # Удаляем обе связи
+        deleted_count, _ = Friendship.objects.filter(
+            Q(from_user=request.user, to_user=friend_user) |
+            Q(from_user=friend_user, to_user=request.user)
+        ).delete()
+
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            if deleted_count > 0:
+                return JsonResponse({'success': True, 'message': f'Пользователь {friend_user.username} удален из друзей'})
+            else:
+                return JsonResponse({'success': False, 'error': 'Дружба не найдена'})
+
+        messages.info(request, f'Пользователь {friend_user.username} удалён из друзей')
+        return redirect('profile', user_id=request.user.id)
+
+    # Если не POST запрос, перенаправляем на профиль
     return redirect('profile', user_id=request.user.id)
 
 # ============================================================================
@@ -1871,9 +2007,6 @@ def dashboard(request):
 # ============================================================================
 # АВТОРИЗАЦИЯ И РЕГИСТРАЦИЯ
 # ============================================================================
-def friends_list(request):
-    # Пока просто возвращаем пустую страницу
-    return render(request, 'friends_list.html')
 
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm

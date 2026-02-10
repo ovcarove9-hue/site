@@ -1,4 +1,5 @@
 {% load static %}
+{% load friend_extras %}
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -605,6 +606,8 @@
 
           {% if user.is_authenticated %}
               <a href="{% url 'create_court' %}" class="cta-button" style="padding: 8px 16px; font-size: 14px; margin: 3px;">Добавить площадку</a>
+              <a href="{% url 'friends' %}" class="cta-button" style="padding: 8px 16px; font-size: 14px; margin: 3px;">Друзья</a>
+              <a href="{% url 'friend_requests' %}" class="cta-button" style="padding: 8px 16px; font-size: 14px; margin: 3px;">Заявки ({{ user|get_friend_requests_count }})</a>
               {% if user.id %}
                   <a href="{% url 'profile' user.id %}" class="cta-button" style="padding: 8px 16px; font-size: 14px; margin: 3px;">Мой профиль</a>
               {% endif %}

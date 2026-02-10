@@ -62,6 +62,7 @@ urlpatterns = [
     path('upload-avatar/', views.upload_avatar, name='upload_avatar'),
     path('friends/<int:user_id>/', views.friends_list, name='friends_list'),
     path('friends/', views.friends_list, name='my_friends'),  # без ID для текущего пользователя
+    path('friend-requests/', views.friend_requests, name='friend_requests'),
     path('add-friend/<int:user_id>/', views.add_friend, name='add_friend'),
     path('accept-friend/<int:friendship_id>/', views.accept_friend, name='accept_friend'),
     path('reject-friend/<int:friendship_id>/', views.reject_friend, name='reject_friend'),
