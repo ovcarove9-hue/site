@@ -15,7 +15,6 @@ import json
 import decimal
 from datetime import datetime, timedelta, date
 import calendar
-from datetime import datetime, timedelta, date
 from .models import (
     UserProfile, VolleyballCourt, Game, GameParticipation,
     Friendship, CourtBooking, TimeSlot, Review, CourtPhoto
@@ -23,62 +22,14 @@ from .models import (
 from .forms import (
     ProfileEditForm, AvatarUploadForm, SearchForm, FriendSearchForm,
     GameCreationForm, GameJoinForm, CourtSuggestionForm,
-    CourtBookingForm, ReviewForm, QuickBookingForm
+    CourtBookingForm, ReviewForm, QuickBookingForm,
+    CustomUserRegistrationForm
 )
-
-from django.shortcuts import render, redirect
 from django.contrib.auth import login
-from .forms import CustomUserRegistrationForm  # ← импортируйте новую форму
 from django.core import serializers
-from django.http import JsonResponse
 
-@require_GET
-def games_by_date_api(request):
-    """API для получения игр по дате"""
-    date_str = request.GET.get('date')
-    
-    if not date_str:
-        return JsonResponse({'error': 'Не указана дата'}, status=400)
-    
-    try:
-        query_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-    except ValueError:
-        return JsonResponse({'error': 'Неверный формат даты'}, status=400)
-    
-    # Получаем игры на указанную дату
-    games_queryset = Game.objects.filter(
-        game_date=query_date,
-        is_active=True
-    ).select_related('organizer').prefetch_related('participants').order_by('game_time')
-    games = list(games_queryset)
-    
-    games_data = []
-    for game in games:
-        can_join = False
-        if request.user.is_authenticated:
-            can_join = (
-                game.organizer != request.user and 
-                not game.participants.filter(id=request.user.id).exists() and
-                game.participants.count() < game.max_players
-            )
-        
-        games_data.append({
-            'id': game.id,
-            'title': game.title,
-            'description': game.description or '',
-            'time': game.game_time.strftime('%H:%M'),
-            'location': game.location,
-            'participants': game.participants.count(),
-            'max_players': game.max_players,
-            'organizer': game.organizer.username,
-            'can_join': can_join,
-        })
-    
-    return JsonResponse({
-        'date': date_str,
-        'games': games_data,
-        'count': len(games_data)
-    })
+# API функции перемещены в myapp.api
+# см. myapp.api.games_by_date_api
 
 def register(request):
     if request.method == 'POST':
@@ -110,7 +61,6 @@ def upload_player_avatar(request):
 # ОСНОВНЫЕ СТРАНИЦЫ
 # ============================================================================
 # myapp/views.py
-from django.shortcuts import render
 import json
 
 def volleyball_map(request):
@@ -395,7 +345,7 @@ def home(request):
         'week_calendar': calendar_context['week_days'],  # Добавляем календарь недели в контекст
     }
 
-    return render(request, 'home.html', context)
+    return render(request, 'common/home.html', context)
 
 @login_required
 def full_map_view(request):
@@ -549,7 +499,7 @@ def map_view(request):
         }
     }
     
-    return render(request, 'map.html', context)
+    return render(request, 'court/map.html', context)
 
 # ============================================================================
 # СИСТЕМА БРОНИРОВАНИЯ ПЛОЩАДОК
@@ -1026,7 +976,7 @@ def my_suggestions(request):
         'needs_info_count': needs_info_courts.count(),
     }
     
-    return render(request, 'my_suggestions.html', context)
+    return render(request, 'court/my_suggestions.html', context)
 
 # ============================================================================
 # АДМИН-МОДЕРАЦИЯ (только для суперпользователей)
@@ -1066,7 +1016,7 @@ def moderation_dashboard(request):
         'is_superuser': request.user.is_superuser,
     }
     
-    return render(request, 'moderation_dashboard.html', context)
+    return render(request, 'court/moderation_dashboard.html', context)
 
 @login_required
 def moderate_court(request, court_id, action):
@@ -1315,7 +1265,7 @@ def create_game(request):
         'user_bookings': user_bookings,
     }
 
-    return render(request, 'create_game.html', context)
+    return render(request, 'game/create_game.html', context)
 
 @login_required
 def game_detail(request, game_id):
@@ -1346,7 +1296,7 @@ def game_detail(request, game_id):
         'total_participants_count': game.participants.count(),  # Общее количество участников
     }
 
-    return render(request, 'game_detail.html', context)
+    return render(request, 'game/game_detail.html', context)
 
 @login_required
 def leave_game(request, game_id):
@@ -1426,7 +1376,7 @@ def join_game(request, game_id):
         'form': form,
     }
     
-    return render(request, 'join_game.html', context)
+    return render(request, 'game/join_game.html', context)
 
 @login_required
 def my_games(request):
@@ -1554,7 +1504,7 @@ def search_players(request):
         'received_requests': received_requests,
     }
 
-    return render(request, 'search.html', context)
+    return render(request, 'user/search.html', context)
 
 @login_required
 def profile(request, user_id):
@@ -1615,7 +1565,7 @@ def profile(request, user_id):
         'all_friends': friends,  # для модального окна
     }
 
-    return render(request, 'profile.html', context)
+    return render(request, 'user/profile.html', context)
 
 @login_required
 def friends_list(request, user_id=None):
@@ -1667,7 +1617,7 @@ def friends_list(request, user_id=None):
         'friends_online_count': friends_online_count,
     }
 
-    return render(request, 'friends_list.html', context)
+    return render(request, 'user/friends_list.html', context)
 
 @login_required
 def friend_requests(request):
@@ -1699,7 +1649,7 @@ def friend_requests(request):
         'friends_count': friends.count(),
     }
 
-    return render(request, 'friend_requests.html', context)
+    return render(request, 'user/friend_requests.html', context)
 
 @login_required
 def edit_profile(request):
@@ -1726,7 +1676,7 @@ def edit_profile(request):
         'user': request.user,
     }
     
-    return render(request, 'edit_profile.html', context)
+    return render(request, 'user/edit_profile.html', context)
 
 @login_required
 def upload_avatar(request):
@@ -1963,7 +1913,7 @@ def court_detail(request, court_id):
         'avg_rating': court.rating,
     }
     
-    return render(request, 'court_detail.html', context)
+    return render(request, 'court/court_detail.html', context)
 
 @login_required
 def dashboard(request):
@@ -2011,31 +1961,6 @@ def dashboard(request):
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 
-def register(request):
-    """Регистрация нового пользователя"""
-
-    if request.user.is_authenticated:
-        return redirect('home')
-
-    if request.method == 'POST':
-        form = CustomUserRegistrationForm(request.POST)
-
-        if form.is_valid():
-            user = form.save()
-
-            # Автоматически логиним пользователя
-            login(request, user)
-            messages.success(request, f'✅ Добро пожаловать, {user.username}!')
-            return redirect('edit_profile')
-    else:
-        form = CustomUserRegistrationForm()
-
-    context = {
-        'page_title': 'Регистрация',
-        'form': form,
-    }
-
-    return render(request, 'register.html', context)
 
 def login_view(request):
     """Вход в систему"""
@@ -2061,7 +1986,7 @@ def login_view(request):
         'form': form,
     }
     
-    return render(request, 'login.html', context)
+    return render(request, 'user/login.html', context)
 
 @login_required
 def logout_view(request):
@@ -2093,21 +2018,6 @@ def test_change(request):
 # ОБРАБОТЧИК ОШИБОК
 # ============================================================================
 
-def handler404(request, exception):
-    """Обработчик 404 ошибки"""
-    return render(request, '404.html', status=404)
-
-def handler500(request):
-    """Обработчик 500 ошибки"""
-    return render(request, '500.html', status=500)
-
-def handler403(request, exception):
-    """Обработчик 403 ошибки"""
-    return render(request, '403.html', status=403)
-
-def handler400(request, exception):
-    """Обработчик 400 ошибки"""
-    return render(request, '400.html', status=400)
 
 
 def event_calendar(request):
@@ -2159,7 +2069,7 @@ def event_calendar(request):
         'all_games': games,
         'filter_param': filter_param,  # Передаем параметр фильтра в шаблон
     }
-    return render(request, 'event_calendar.html', context)
+    return render(request, 'common/event_calendar.html', context)
 
 # ============================================================================
 # ФУНКЦИИ ДЛЯ ПРОФИЛЯ И ДРУЗЕЙ (добавьте эти функции в views.py)
@@ -2320,44 +2230,14 @@ def create_court(request):
         'form': form,
     }
 
-    return render(request, 'create_court.html', context)
+    return render(request, 'court/create_court.html', context)
 
 
-def map_view(request):
-    """Отображение страницы с картой волейбольных площадок"""
-    return render(request, 'map.html')
-
-
-def courts_api(request):
-    """API для получения данных о волейбольных площадках"""
-    courts = VolleyballCourt.objects.filter(
-        is_active=True,
-        status='approved'  # Только одобренные площадки
-    ).values(
-        'id', 'name', 'address', 'latitude', 'longitude',
-        'court_type', 'surface', 'is_free', 'is_lighted',
-        'has_parking', 'has_showers', 'has_locker_rooms',
-        'has_equipment_rental', 'has_cafe', 'description',
-        'status', 'price_per_hour', 'opening_time', 'closing_time'
-    )
-
-    # Преобразуем Decimal значения в float для JSON сериализации
-    courts_list = []
-    for court in courts:
-        court_dict = {}
-        for key, value in court.items():
-            if isinstance(value, decimal.Decimal):
-                court_dict[key] = float(value)
-            else:
-                court_dict[key] = value
-        courts_list.append(court_dict)
-
-    return JsonResponse(courts_list, safe=False)
 
 
 def search_courts_view(request):
     """Отображение страницы поиска волейбольных площадок"""
-    return render(request, 'map.html')
+    return render(request, 'court/map.html')
 
 
 def search_courts_api(request):

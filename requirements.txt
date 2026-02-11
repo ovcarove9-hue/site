@@ -1,7 +1,20 @@
+# Django Framework - основной веб-фреймворк
 Django>=4.2,<5.0
+
+# dj-database-url - упрощает конфигурацию базы данных через URL
 dj-database-url>=2.1.0
+
+# gunicorn - WSGI HTTP Server для UNIX
 gunicorn>=21.2.0
+
+# Pillow - библиотека для работы с изображениями
 Pillow>=10.0.0
+
+# psycopg - PostgreSQL database adapter
 psycopg[binary]>=3.1.18
+
+# python-dotenv - загрузка переменных окружения из .env файла
 python-dotenv>=1.0.0
+
+# whitenoise - обслуживание статических файлов
 whitenoise>=6.6.0
