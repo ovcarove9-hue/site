@@ -14,7 +14,6 @@ URL-маршруты приложения myapp
 
 from django.urls import path
 from . import views
-from . import api
 
 urlpatterns = [
     # ============================================================================
@@ -36,7 +35,7 @@ urlpatterns = [
     path('suggest-court/', views.suggest_court, name='suggest_court'),  # Предложить площадку
     path('create-court/', views.create_court, name='create_court'),  # Создать площадку
     path('my-suggestions/', views.my_suggestions, name='my_suggestions'),  # Мои предложения
-    path('moderation/', views.moderation_dashboard, name='moderation_dashboard'),  # Модерация
+    path('moderation/', views.ModerationDashboard.as_view(), name='moderation_dashboard'),  # Модерация
     path('moderate/<int:court_id>/<str:action>/', views.moderate_court, name='moderate_court'),  # Модерация площадки
     
     # ============================================================================
@@ -89,7 +88,7 @@ urlpatterns = [
     path('api/time-slots/<int:court_id>/', views.get_time_slots, name='get_time_slots'),  # Временные слоты
     path('api/search-courts/', views.search_courts_api, name='search_courts_api'),  # Поиск площадок API
     # API для игр
-    path('api/games-by-date/', api.games_by_date_api, name='games_by_date_api'),  # Игры по дате
+    path('api/games-by-date/', views.games_by_date_api, name='games_by_date_api'),  # Игры по дате
     
     # ============================================================================
     # СЛУЖЕБНЫЕ МАРШРУТЫ
@@ -104,9 +103,4 @@ urlpatterns = [
     # Тестовые и отладочные маршруты
     path('test-change/', views.test_change, name='test_change'),  # Тестовое изменение
     
-    # Обработчики ошибок (для тестирования)
-    path('404/', views.handler404, name='handler404'),  # 404 ошибка
-    path('500/', views.handler500, name='handler500'),  # 500 ошибка
-    path('403/', views.handler403, name='handler403'),  # 403 ошибка
-    path('400/', views.handler400, name='handler400'),  # 400 ошибка
 ]
