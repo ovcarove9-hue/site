@@ -104,22 +104,22 @@
         <div class="content-box">
             <h3><i class="fas fa-chart-line"></i> Статистика сообщества</h3>
             <div class="stats-grid">
-                <div class="stat-card">
+                <div class="stat-card" style="cursor: pointer;" onclick="window.location.href='{% url 'search' %}'">
                     <i class="fas fa-users"></i>
                     <h3 style="font-size: 2.5rem;">{{ total_users }}</h3>
                     <p>Активных игроков</p>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card" style="cursor: pointer;" onclick="window.location.href='{% url 'event_calendar' %}?filter=all'">
                     <i class="fas fa-calendar-alt"></i>
                     <h3 style="font-size: 2.5rem;">{{ total_games }}</h3>
                     <p>Всего игр</p>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card" style="cursor: pointer;" onclick="window.location.href='{% url 'map' %}'">
                     <i class="fas fa-map-marker-alt"></i>
                     <h3 style="font-size: 2.5rem;">{{ total_courts }}</h3>
                     <p>Площадок в базе</p>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card" style="cursor: pointer;" onclick="window.location.href='{% url 'event_calendar' %}?filter=today'">
                     <i class="fas fa-volleyball-ball"></i>
                     <h3 style="font-size: 2.5rem;">{{ today_games_count }}</h3>
                     <p>Игр сегодня</p>
@@ -128,22 +128,22 @@
 
             <!-- Дополнительная статистика -->
             <div class="stats-grid" style="margin-top: 20px;">
-                <div class="stat-card">
+                <div class="stat-card" style="cursor: pointer;" onclick="window.location.href='{% url 'map' %}'">
                     <i class="fas fa-building"></i>
                     <h3 style="font-size: 2.5rem;">{{ indoor_courts }}</h3>
                     <p>Зальные площадки</p>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card" style="cursor: pointer;" onclick="window.location.href='{% url 'map' %}'">
                     <i class="fas fa-sun"></i>
                     <h3 style="font-size: 2.5rem;">{{ outdoor_courts }}</h3>
                     <p>Открытые площадки</p>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card" style="cursor: pointer;" onclick="window.location.href='{% url 'map' %}'">
                     <i class="fas fa-umbrella-beach"></i>
                     <h3 style="font-size: 2.5rem;">{{ beach_courts }}</h3>
                     <p>Пляжные площадки</p>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card" style="cursor: pointer;" onclick="window.location.href='{% url 'event_calendar' %}?filter=upcoming'">
                     <i class="fas fa-arrow-right"></i>
                     <h3 style="font-size: 2.5rem;">{{ upcoming_games_count }}</h3>
                     <p>Предстоящих игр</p>
@@ -211,7 +211,7 @@
         <!-- Мои предстоящие бронирования -->
         {% if user.is_authenticated and upcoming_bookings %}
         <div class="quick-actions" style="margin-top: 30px;">
-            <h3><i class="fas fa-calendar-check"></i> Мои бронирования</h3>
+            <h3><i class="fas fa-calendar-check"></i> Мои игры</h3>
             {% for booking in upcoming_bookings %}
                 <div class="user-item" onclick="window.location.href='{% url 'booking_detail' booking.id %}'">
                     <div class="user-avatar" style="background: #48bb78;">

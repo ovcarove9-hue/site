@@ -167,7 +167,7 @@ class VolleyballCourt(models.Model):
     rating = models.DecimalField(max_digits=3, decimal_places=1, default=0, verbose_name="Рейтинг")
     
     # Поля для бронирования
-    booking_enabled = models.BooleanField(default=True, verbose_name="Бронирование доступно")
+    booking_enabled = models.BooleanField(default=True, verbose_name="Игра доступна")
     min_booking_hours = models.PositiveIntegerField(default=1, verbose_name="Минимальное время брони (часы)")
     max_booking_hours = models.PositiveIntegerField(default=3, verbose_name="Максимальное время брони (часы)")
     advance_booking_days = models.PositiveIntegerField(default=14, verbose_name="Макс. дней для бронирования вперед")
@@ -419,7 +419,7 @@ class Game(models.Model):
         return max(0, self.max_players - self.participants.count())
 
 class CourtBooking(models.Model):
-    """Бронирование площадок"""
+    """Игры на площадках"""
     STATUS_CHOICES = [
         ('pending', '⏳ Ожидает подтверждения'),
         ('confirmed', '✅ Подтверждено'),
@@ -450,8 +450,8 @@ class CourtBooking(models.Model):
         verbose_name="Пользователь"
     )
     
-    # Время бронирования
-    booking_date = models.DateField(verbose_name="Дата бронирования")
+    # Время игры
+    booking_date = models.DateField(verbose_name="Дата игры")
     start_time = models.TimeField(verbose_name="Время начала")
     end_time = models.TimeField(verbose_name="Время окончания")
     hours = models.PositiveIntegerField(verbose_name="Количество часов", default=1)
@@ -492,7 +492,7 @@ class CourtBooking(models.Model):
         max_length=20,
         choices=STATUS_CHOICES,
         default='pending',
-        verbose_name="Статус бронирования"
+        verbose_name="Статус игры"
     )
     payment_status = models.CharField(
         max_length=20,
@@ -521,8 +521,8 @@ class CourtBooking(models.Model):
     user_agent = models.TextField(blank=True, verbose_name="User Agent")
     
     class Meta:
-        verbose_name = "Бронирование площадки"
-        verbose_name_plural = "Бронирования площадок"
+        verbose_name = "Игра на площадке"
+        verbose_name_plural = "Игры на площадках"
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['booking_date', 'start_time']),
@@ -563,7 +563,7 @@ class CourtBooking(models.Model):
         return self.status == 'confirmed' and (booking_datetime - timedelta(hours=24)) > timezone.now()
     
     def confirm(self, admin_user=None):
-        """Подтвердить бронирование"""
+        """Подтвердить игру"""
         self.status = 'confirmed'
         self.confirmed_at = timezone.now()
         if admin_user:
@@ -571,7 +571,7 @@ class CourtBooking(models.Model):
         self.save()
     
     def cancel(self, reason=''):
-        """Отменить бронирование"""
+        """Отменить игру"""
         self.status = 'cancelled'
         self.cancelled_at = timezone.now()
         if reason:
@@ -592,17 +592,17 @@ class TimeSlot(models.Model):
     
     # Статус
     is_available = models.BooleanField(default=True, verbose_name="Доступен")
-    is_booked = models.BooleanField(default=False, verbose_name="Забронирован")
+    is_booked = models.BooleanField(default=False, verbose_name="Занят")
     is_blocked = models.BooleanField(default=False, verbose_name="Заблокирован")
     
-    # Связанное бронирование
+    # Связанная игра
     booking = models.ForeignKey(
         CourtBooking,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name='time_slots',
-        verbose_name="Бронирование"
+        verbose_name="Игра"
     )
     
     # Цена
@@ -748,7 +748,7 @@ class UserProfile(models.Model):
     whatsapp = models.CharField('WhatsApp', max_length=100, blank=True)
     
     # Настройки уведомлений
-    notify_bookings = models.BooleanField('Уведомлять о бронированиях', default=True)
+    notify_bookings = models.BooleanField('Уведомлять об играх', default=True)
     notify_messages = models.BooleanField('Уведомлять о сообщениях', default=True)
     notify_news = models.BooleanField('Уведомлять о новостях', default=False)
 
@@ -790,7 +790,7 @@ class Payment(models.Model):
         CourtBooking,
         on_delete=models.CASCADE,
         related_name='payments',
-        verbose_name="Бронирование"
+        verbose_name="Игра"
     )
     user = models.ForeignKey(
         User,
@@ -835,8 +835,8 @@ class Payment(models.Model):
 class Notification(models.Model):
     """Уведомления для пользователей"""
     TYPE_CHOICES = [
-        ('booking_confirmed', 'Бронирование подтверждено'),
-        ('booking_cancelled', 'Бронирование отменено'),
+        ('booking_confirmed', 'Игра подтверждена'),
+        ('booking_cancelled', 'Игра отменена'),
         ('booking_reminder', 'Напоминание о игре'),
         ('payment_success', 'Оплата прошла успешно'),
         ('payment_failed', 'Ошибка оплаты'),
@@ -985,7 +985,7 @@ class Review(models.Model):
         null=True,
         blank=True,
         related_name='review',
-        verbose_name="Бронирование"
+        verbose_name="Игра"
     )
     
     # Оценки

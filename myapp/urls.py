@@ -95,4 +95,8 @@ urlpatterns = [
 
     # Календарь событий
     path('events-calendar/', views.event_calendar, name='event_calendar'),
+
+    # SEO файлы
+    path('robots.txt', views.robots_txt, name='robots_txt'),
+    path('sitemap.xml', views.sitemap_xml, name='sitemap_xml'),
 ]

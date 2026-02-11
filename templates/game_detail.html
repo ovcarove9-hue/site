@@ -1,0 +1,292 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .game-detail-container {
+        background: white;
+        border-radius: 20px;
+        padding: 30px;
+        width: 100%;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    }
+
+    .game-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .game-name {
+        color: #4f46e5;
+        font-weight: 700;
+    }
+
+    .game-type-badge {
+        font-size: 0.8em;
+        padding: 5px 10px;
+        border-radius: 20px;
+        color: white;
+    }
+
+    .tournament { background-color: #ec4899; }
+    .regular { background-color: #4f46e5; }
+
+    .game-status-badge {
+        font-size: 0.8em;
+        padding: 5px 10px;
+        border-radius: 20px;
+        color: white;
+    }
+
+    .approved { background-color: #10b981; }
+    .pending { background-color: #f59e0b; }
+    .rejected { background-color: #ef4444; }
+
+    .game-features-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .game-feature-item {
+        background-color: #e0e7ff;
+        color: #4f46e5;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 0.8em;
+    }
+
+    .game-stats-display {
+        font-size: 1.5em;
+        font-weight: bold;
+        color: #4f46e5;
+    }
+
+    .section-title {
+        color: #4f46e5;
+        border-bottom: 2px solid #e2e8f0;
+        padding-bottom: 5px;
+        margin-top: 30px;
+        margin-bottom: 20px;
+    }
+
+    .participants-section {
+        margin-top: 30px;
+    }
+
+    .participant-card {
+        border: 1px solid #eee;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+
+    .rating-stars {
+        color: #ffc107;
+    }
+
+    .game-join-btn {
+        background: linear-gradient(90deg, #4f46e5, #7c3aed);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        font-weight: 600;
+        width: 100%;
+        margin-top: 1rem;
+    }
+
+    .game-join-btn:hover {
+        background: linear-gradient(90deg, #4338ca, #6d28d9);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="game-detail-container">
+        <div class="game-header">
+            <h1 class="game-name">{{ game.title }}</h1>
+            <div class="d-flex justify-content-center gap-2 mt-2">
+                <span class="game-type-badge {% if game.is_tournament %}tournament{% else %}regular{% endif %}">
+                    {% if game.is_tournament %}Турнир{% else %}Обычная игра{% endif %}
+                </span>
+                <span class="game-status-badge approved">Активна</span>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-calendar text-primary"></i> Дата</h5>
+                        <p>{{ game.game_date|date:"d.m.Y" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-clock text-primary"></i> Время</h5>
+                        <p>{{ game.game_time|time:"H:i" }}</p>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-map-marker-alt text-primary"></i> Место</h5>
+                        <p>{{ game.location }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-baseball-ball text-primary"></i> Тип спорта</h5>
+                        <p>{{ game.get_sport_type_display }}</p>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-chess text-primary"></i> Уровень</h5>
+                        <p>{{ game.get_skill_level_display }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-users text-primary"></i> Всего участников</h5>
+                        <p class="game-stats-display">{{ game.max_players }}</p>
+                    </div>
+                </div>
+
+                <h4 class="section-title"><i class="fas fa-align-left"></i> Описание</h4>
+                <p>{{ game.description|default:"Нет описания"|linebreaks }}</p>
+
+                <h4 class="section-title"><i class="fas fa-user"></i> Организатор</h4>
+                <p>
+                    <a href="{% url 'profile' user_id=game.organizer.id %}">
+                        {{ game.organizer.username }}
+                    </a>
+                </p>
+
+                <!-- Participants section -->
+                <div class="participants-section">
+                    <h4 class="section-title"><i class="fas fa-users"></i> Участники ({{ participants|length }}/{{ game.max_players }})</h4>
+                    <div class="row">
+                        {% for participant in participants %}
+                        <div class="col-md-3 col-6 mb-3 text-center">
+                            <a href="{% url 'profile' user_id=participant.id %}">
+                                {% if participant.profile.avatar %}
+                                    <img src="{{ participant.profile.avatar.url }}" alt="{{ participant.username }}" class="rounded-circle" width="60" height="60">
+                                {% else %}
+                                    <div class="bg-light rounded-circle d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                        <span class="text-muted">{{ participant.username|slice:":1"|upper }}</span>
+                                    </div>
+                                {% endif %}
+                            </a>
+                            <div class="mt-1">
+                                <small>{{ participant.username }}</small>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="col-12">
+                            <p class="text-muted">Пока никто не зарегистрировался на игру</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Display organizer as a participant -->
+                    {% if game.organizer not in participants %}
+                    <hr>
+                    <div class="row">
+                        <div class="col-12">
+                            <h6>Организатор игры:</h6>
+                            <div class="d-flex align-items-center">
+                                <a href="{% url 'profile' user_id=game.organizer.id %}">
+                                    {% if game.organizer.profile.avatar %}
+                                        <img src="{{ game.organizer.profile.avatar.url }}" alt="{{ game.organizer.username }}" class="rounded-circle" width="40" height="40">
+                                    {% else %}
+                                        <div class="bg-light rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                            <span class="text-muted">{{ game.organizer.username|slice:":1"|upper }}</span>
+                                        </div>
+                                    {% endif %}
+                                </a>
+                                <div class="ml-2 ml-sm-3">
+                                    <small>{{ game.organizer.username }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <h4><i class="fas fa-info-circle"></i> Информация об игре</h4>
+                
+                <div class="card">
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item">
+                                <strong>Всего мест:</strong> {{ game.max_players }}
+                            </li>
+                            <li class="list-group-item">
+                                <strong>Свободных мест:</strong> {{ spots_left }}
+                            </li>
+                            <li class="list-group-item">
+                                <strong>Занятых мест:</strong> {{ game.participants.count }}
+                            </li>
+                            {% if game.is_private %}
+                            <li class="list-group-item">
+                                <span class="badge bg-warning">Приватная игра</span>
+                            </li>
+                            {% endif %}
+                        </ul>
+
+                        {% if user.is_authenticated %}
+                        <div class="mt-3">
+                            {% if is_participant or user == game.organizer %}
+                            <div class="alert alert-success">
+                                {% if user == game.organizer %}
+                                    Вы организатор этой игры
+                                {% else %}
+                                    Вы зарегистрированы на эту игру
+                                {% endif %}
+                            </div>
+                            {% if user != game.organizer %}
+                            <form method="post" action="{% url 'leave_game' game_id=game.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger btn-block">Отказаться от участия</button>
+                            </form>
+                            {% endif %}
+                            {% elif can_join %}
+                            <a href="{% url 'join_game' game_id=game.id %}" class="btn game-join-btn">
+                                <i class="fas fa-sign-in-alt"></i> Записаться на игру
+                            </a>
+                            {% else %}
+                            {% if game.participants.count >= game.max_players %}
+                            <div class="alert alert-info">
+                                Все места заняты
+                            </div>
+                            {% else %}
+                            <div class="alert alert-info">
+                                Вы не можете принять участие
+                            </div>
+                            {% endif %}
+                            {% endif %}
+
+                            <!-- Ссылка на другие игры -->
+                            {% if is_participant or user == game.organizer %}
+                            <div class="mt-3">
+                                <a href="{% url 'event_calendar' %}" class="btn btn-outline-primary btn-block">Другие игры</a>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <a href="{% url 'login' %}">Войдите</a>, чтобы записаться на игру
+                        </div>
+                        {% endif %}
+
+                        <div class="mt-3">
+                            <a href="{% url 'home' %}" class="btn btn-outline-secondary btn-block">Назад к главной</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

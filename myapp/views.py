@@ -2,7 +2,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponseForbidden, HttpResponseBadRequest
+from django.http import JsonResponse, HttpResponseForbidden, HttpResponseBadRequest, HttpResponse
 from django.db.models import Q, Count, Avg
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -115,7 +115,7 @@ import json
 
 def volleyball_map(request):
     """Отображение карты волейбольных площадок"""
-    return render(request, 'myapp/volleyball_map.html')
+    return render(request, 'volleyball_map.html')
 
 def court_page(request):
     """Отображение страницы конкретной площадки"""
@@ -160,7 +160,7 @@ def court_page(request):
         'court_id': court_id,
     }
     
-    return render(request, 'myapp/court_page.html', context)
+    return render(request, 'court_page.html', context)
 
 def home(request):
     """Главная страница"""
@@ -395,7 +395,7 @@ def home(request):
         'week_calendar': calendar_context['week_days'],  # Добавляем календарь недели в контекст
     }
 
-    return render(request, 'myapp/home.html', context)
+    return render(request, 'home.html', context)
 
 @login_required
 def full_map_view(request):
@@ -463,7 +463,7 @@ def full_map_view(request):
         'current_filters': {}
     }
 
-    return render(request, 'myapp/full_map.html', context)
+    return render(request, 'full_map.html', context)
 
 
 def map_view(request):
@@ -549,7 +549,7 @@ def map_view(request):
         }
     }
     
-    return render(request, 'myapp/map.html', context)
+    return render(request, 'map.html', context)
 
 # ============================================================================
 # СИСТЕМА БРОНИРОВАНИЯ ПЛОЩАДОК
@@ -557,11 +557,11 @@ def map_view(request):
 
 @login_required
 def book_court(request, court_id):
-    """Бронирование площадки"""
+    """Планирование игры на площадке"""
     court = get_object_or_404(VolleyballCourt, id=court_id, status='approved', is_active=True)
     
     if not court.booking_enabled:
-        messages.error(request, 'Бронирование для этой площадки временно недоступно')
+        messages.error(request, 'Планирование игры для этой площадки временно недоступно')
         return redirect('map_view')
     
     if request.method == 'POST':
@@ -569,7 +569,7 @@ def book_court(request, court_id):
         
         if form.is_valid():
             try:
-                # Создаем бронирование
+                # Создаем игру
                 booking = form.save(commit=False)
                 booking.court = court
                 booking.user = request.user
@@ -581,10 +581,10 @@ def book_court(request, court_id):
                 end_datetime = start_datetime + timedelta(hours=booking.hours)
                 booking.end_time = end_datetime.time()
                 
-                # Сохраняем бронирование
+                # Сохраняем игру
                 booking.save()
                 
-                # Создаем временные слоты для этого бронирования
+                # Создаем временные слоты для этой игры
                 for i in range(booking.hours):
                     slot_time = (start_datetime + timedelta(hours=i)).time()
                     slot_end = (start_datetime + timedelta(hours=i+1)).time()
@@ -606,7 +606,7 @@ def book_court(request, court_id):
                     pass
                 
                 messages.success(request, 
-                    f'✅ Площадка "{court.name}" успешно забронирована! '
+                    f'✅ Игра на площадке "{court.name}" успешно запланирована! '
                     f'Номер брони: {booking.booking_number}. '
                     f'Общая стоимость: {booking.total_price} руб.'
                 )
@@ -614,7 +614,7 @@ def book_court(request, court_id):
                 return redirect('booking_confirmation', booking_id=booking.id)
                 
             except Exception as e:
-                messages.error(request, f'Ошибка при создании бронирования: {str(e)}')
+                messages.error(request, f'Ошибка при создании игры: {str(e)}')
         else:
             messages.error(request, 'Пожалуйста, исправьте ошибки в форме')
     else:
@@ -637,14 +637,14 @@ def book_court(request, court_id):
         form = CourtBookingForm(court=court, user=request.user, initial=initial_data)
     
     context = {
-        'page_title': f'Бронирование: {court.name}',
+        'page_title': f'Планирование игры: {court.name}',
         'court': court,
         'form': form,
         'today': timezone.now().date(),
         'max_date': timezone.now().date() + timedelta(days=court.advance_booking_days),
     }
     
-    return render(request, 'myapp/book_court.html', context)
+    return render(request, 'book_court.html', context)
 
 @login_required
 def booking_confirmation(request, booking_id):
@@ -657,11 +657,11 @@ def booking_confirmation(request, booking_id):
         'court': booking.court,
     }
     
-    return render(request, 'myapp/booking_confirmation.html', context)
+    return render(request, 'booking_confirmation.html', context)
 
 @login_required
 def my_bookings(request):
-    """Мои бронирования"""
+    """Мои игры"""
     bookings = CourtBooking.objects.filter(user=request.user).order_by('-booking_date', '-start_time')
     
     # Фильтрация по статусу
@@ -681,16 +681,16 @@ def my_bookings(request):
     completed_bookings = bookings.filter(status='completed').count()
     
     context = {
-        'page_title': 'Мои бронирования',
+        'page_title': 'Мои игры',
         'page_obj': page_obj,
-        'total_bookings': total_bookings,
-        'active_bookings': active_bookings,
-        'cancelled_bookings': cancelled_bookings,
-        'completed_bookings': completed_bookings,
+        'total_games': total_bookings,
+        'active_games': active_bookings,
+        'cancelled_games': cancelled_bookings,
+        'completed_games': completed_bookings,
         'status_filter': status_filter,
     }
     
-    return render(request, 'myapp/my_bookings.html', context)
+    return render(request, 'my_bookings.html', context)
 
 @login_required
 def cancel_booking(request, booking_id):
@@ -698,26 +698,26 @@ def cancel_booking(request, booking_id):
     booking = get_object_or_404(CourtBooking, id=booking_id, user=request.user)
     
     if booking.status == 'cancelled':
-        messages.warning(request, 'Это бронирование уже отменено')
+        messages.warning(request, 'Эта игра уже отменена')
         return redirect('my_bookings')
     
     if not booking.can_be_cancelled:
-        messages.error(request, 'Бронирование нельзя отменить менее чем за 24 часа до начала')
+        messages.error(request, 'Игру нельзя отменить менее чем за 24 часа до начала')
         return redirect('my_bookings')
     
     if request.method == 'POST':
         reason = request.POST.get('reason', '')
         booking.cancel(reason=reason)
-        messages.success(request, f'Бронирование №{booking.booking_number} успешно отменено')
+        messages.success(request, f'Игра №{booking.booking_number} успешно отменена')
         return redirect('my_bookings')
     
     context = {
-        'page_title': 'Отмена бронирования',
+        'page_title': 'Отмена игры',
         'booking': booking,
         'court': booking.court,
     }
     
-    return render(request, 'myapp/cancel_booking.html', context)
+    return render(request, 'cancel_booking.html', context)
 
 @login_required
 def booking_detail(request, booking_id):
@@ -728,14 +728,14 @@ def booking_detail(request, booking_id):
     time_slots = TimeSlot.objects.filter(booking=booking).order_by('start_time')
     
     context = {
-        'page_title': f'Бронирование №{booking.booking_number}',
+        'page_title': f'Игра №{booking.booking_number}',
         'booking': booking,
         'court': booking.court,
         'time_slots': time_slots,
         'can_cancel': booking.can_be_cancelled,
     }
     
-    return render(request, 'myapp/booking_detail.html', context)
+    return render(request, 'booking_detail.html', context)
 
 # ============================================================================
 # API ДЛЯ БРОНИРОВАНИЯ И КАРТЫ
@@ -773,7 +773,7 @@ def check_availability(request):
             is_available = False
             conflict_message = f"Площадка закрывается в {court.closing_time.strftime('%H:%M')}"
         
-        # 2. Проверяем существующие бронирования
+        # 2. Проверяем существующие игры
         if is_available:
             conflicting_bookings = CourtBooking.objects.filter(
                 court=court,
@@ -998,7 +998,7 @@ def suggest_court(request):
         'form': form,
     }
     
-    return render(request, 'myapp/suggest_court.html', context)
+    return render(request, 'suggest_court.html', context)
 
 @login_required
 def my_suggestions(request):
@@ -1026,7 +1026,7 @@ def my_suggestions(request):
         'needs_info_count': needs_info_courts.count(),
     }
     
-    return render(request, 'myapp/my_suggestions.html', context)
+    return render(request, 'my_suggestions.html', context)
 
 # ============================================================================
 # АДМИН-МОДЕРАЦИЯ (только для суперпользователей)
@@ -1066,7 +1066,7 @@ def moderation_dashboard(request):
         'is_superuser': request.user.is_superuser,
     }
     
-    return render(request, 'myapp/moderation_dashboard.html', context)
+    return render(request, 'moderation_dashboard.html', context)
 
 @login_required
 def moderate_court(request, court_id, action):
@@ -1124,7 +1124,7 @@ def moderate_court(request, court_id, action):
         'page_title': f'Модерация: {court.name}'
     }
     
-    return render(request, 'myapp/moderate_court_form.html', context)
+    return render(request, 'moderate_court_form.html', context)
 
 # ============================================================================
 # API ДЛЯ КАРТЫ И ДАННЫХ
@@ -1315,7 +1315,7 @@ def create_game(request):
         'user_bookings': user_bookings,
     }
 
-    return render(request, 'myapp/create_game.html', context)
+    return render(request, 'create_game.html', context)
 
 @login_required
 def game_detail(request, game_id):
@@ -1346,7 +1346,7 @@ def game_detail(request, game_id):
         'total_participants_count': game.participants.count(),  # Общее количество участников
     }
 
-    return render(request, 'myapp/game_detail.html', context)
+    return render(request, 'game_detail.html', context)
 
 @login_required
 def leave_game(request, game_id):
@@ -1426,7 +1426,7 @@ def join_game(request, game_id):
         'form': form,
     }
     
-    return render(request, 'myapp/join_game.html', context)
+    return render(request, 'join_game.html', context)
 
 @login_required
 def my_games(request):
@@ -1458,7 +1458,7 @@ def my_games(request):
         'upcoming_games': upcoming_games,
     }
     
-    return render(request, 'myapp/my_games.html', context)
+    return render(request, 'my_games.html', context)
 
 # ============================================================================
 # ПОИСК И ПРОФИЛИ
@@ -1515,7 +1515,7 @@ def search_players(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    # Получаем ID друзей текущего пользователя
+    # Получаем ID д��узей текуще��о пользов��теля
     friends_list = []
     sent_requests = []
     received_requests = []
@@ -1554,7 +1554,7 @@ def search_players(request):
         'received_requests': received_requests,
     }
 
-    return render(request, 'myapp/search.html', context)
+    return render(request, 'search.html', context)
 
 @login_required
 def profile(request, user_id):
@@ -1581,7 +1581,7 @@ def profile(request, user_id):
     organized_games = Game.objects.filter(
         organizer=user,
         is_active=True
-    ).order_by('-game_date')[:5]
+    ).order_by('-game_date')[:3]
 
     # Бронирования пользователя
     recent_bookings = CourtBooking.objects.filter(
@@ -1615,7 +1615,7 @@ def profile(request, user_id):
         'all_friends': friends,  # для модального окна
     }
 
-    return render(request, 'myapp/profile.html', context)
+    return render(request, 'profile.html', context)
 
 @login_required
 def friends_list(request, user_id=None):
@@ -1667,7 +1667,7 @@ def friends_list(request, user_id=None):
         'friends_online_count': friends_online_count,
     }
 
-    return render(request, 'myapp/friends_list.html', context)
+    return render(request, 'friends_list.html', context)
 
 @login_required
 def friend_requests(request):
@@ -1699,7 +1699,7 @@ def friend_requests(request):
         'friends_count': friends.count(),
     }
 
-    return render(request, 'myapp/friend_requests.html', context)
+    return render(request, 'friend_requests.html', context)
 
 @login_required
 def edit_profile(request):
@@ -1726,7 +1726,7 @@ def edit_profile(request):
         'user': request.user,
     }
     
-    return render(request, 'myapp/edit_profile.html', context)
+    return render(request, 'edit_profile.html', context)
 
 @login_required
 def upload_avatar(request):
@@ -1913,7 +1913,7 @@ def add_review(request, court_id):
         'existing_review': existing_review,
     }
     
-    return render(request, 'myapp/add_review.html', context)
+    return render(request, 'add_review.html', context)
 
 def update_court_rating(court):
     """Обновление рейтинга площадки на основе отзывов"""
@@ -1963,7 +1963,7 @@ def court_detail(request, court_id):
         'avg_rating': court.rating,
     }
     
-    return render(request, 'myapp/court_detail.html', context)
+    return render(request, 'court_detail.html', context)
 
 @login_required
 def dashboard(request):
@@ -2002,7 +2002,7 @@ def dashboard(request):
         'upcoming_bookings': upcoming_bookings,
     }
     
-    return render(request, 'myapp/dashboard.html', context)
+    return render(request, 'dashboard.html', context)
 
 # ============================================================================
 # АВТОРИЗАЦИЯ И РЕГИСТРАЦИЯ
@@ -2035,7 +2035,7 @@ def register(request):
         'form': form,
     }
 
-    return render(request, 'myapp/register.html', context)
+    return render(request, 'register.html', context)
 
 def login_view(request):
     """Вход в систему"""
@@ -2061,7 +2061,7 @@ def login_view(request):
         'form': form,
     }
     
-    return render(request, 'myapp/login.html', context)
+    return render(request, 'login.html', context)
 
 @login_required
 def logout_view(request):
@@ -2087,7 +2087,7 @@ def test_change(request):
         'reviews_count': Review.objects.count(),
     }
     
-    return render(request, 'myapp/test_change.html', context)
+    return render(request, 'test_change.html', context)
 
 # ============================================================================
 # ОБРАБОТЧИК ОШИБОК
@@ -2095,25 +2095,44 @@ def test_change(request):
 
 def handler404(request, exception):
     """Обработчик 404 ошибки"""
-    return render(request, 'myapp/404.html', status=404)
+    return render(request, '404.html', status=404)
 
 def handler500(request):
     """Обработчик 500 ошибки"""
-    return render(request, 'myapp/500.html', status=500)
+    return render(request, '500.html', status=500)
 
 def handler403(request, exception):
     """Обработчик 403 ошибки"""
-    return render(request, 'myapp/403.html', status=403)
+    return render(request, '403.html', status=403)
 
 def handler400(request, exception):
     """Обработчик 400 ошибки"""
-    return render(request, 'myapp/400.html', status=400)
+    return render(request, '400.html', status=400)
 
 
 def event_calendar(request):
     """Страница календаря событий"""
-    # Получаем все игры из базы данных
-    games = Game.objects.filter(is_active=True).select_related('organizer', 'court').order_by('game_date', 'game_time')
+    from datetime import date
+
+    # Получаем параметр фильтра из URL
+    filter_param = request.GET.get('filter', 'all')
+
+    # Фильтруем игры в зависимости от параметра
+    if filter_param == 'today':
+        # Только игры на сегодня
+        games = Game.objects.filter(
+            is_active=True,
+            game_date=date.today()
+        ).select_related('organizer', 'court').order_by('game_date', 'game_time')
+    elif filter_param == 'upcoming':
+        # Только предстоящие игры (включая сегодня)
+        games = Game.objects.filter(
+            is_active=True,
+            game_date__gte=date.today()
+        ).select_related('organizer', 'court').order_by('game_date', 'game_time')
+    else:  # filter == 'all' или по умолчанию
+        # Все активные игры
+        games = Game.objects.filter(is_active=True).select_related('organizer', 'court').order_by('game_date', 'game_time')
 
     # Подготовим данные для календаря
     games_by_date = {}
@@ -2138,8 +2157,9 @@ def event_calendar(request):
         'page_title': 'Календарь событий',
         'games_by_date': games_by_date,
         'all_games': games,
+        'filter_param': filter_param,  # Передаем параметр фильтра в шаблон
     }
-    return render(request, 'myapp/event_calendar.html', context)
+    return render(request, 'event_calendar.html', context)
 
 # ============================================================================
 # ФУНКЦИИ ДЛЯ ПРОФИЛЯ И ДРУЗЕЙ (добавьте эти функции в views.py)
@@ -2170,7 +2190,7 @@ def user_profile_view(request, user_id):
         'friendship': friendship,
     }
     
-    return render(request, 'myapp/profile_detail.html', context)
+    return render(request, 'profile_detail.html', context)
 
 @login_required
 def send_friend_request(request, user_id):
@@ -2300,12 +2320,12 @@ def create_court(request):
         'form': form,
     }
 
-    return render(request, 'myapp/create_court.html', context)
+    return render(request, 'create_court.html', context)
 
 
 def map_view(request):
     """Отображение страницы с картой волейбольных площадок"""
-    return render(request, 'myapp/map.html')
+    return render(request, 'map.html')
 
 
 def courts_api(request):
@@ -2430,3 +2450,5 @@ def search_courts_api(request):
         courts_list.append(court_dict)
 
     return JsonResponse(courts_list, safe=False)
+# Импорты для SEO функций
+from .seo_views import robots_txt, sitemap_xml

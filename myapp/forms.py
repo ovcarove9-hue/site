@@ -404,9 +404,9 @@ class CourtSuggestionForm(forms.ModelForm):
         help_texts = {
             'photo_url': 'Загрузите фото на imgur.com и вставьте прямую ссылку',
             'tags': 'Укажите через запятую ключевые слова для поиска',
-            'min_booking_hours': 'Минимальное количество часов для бронирования',
-            'max_booking_hours': 'Максимальное количество часов для бронирования',
-            'advance_booking_days': 'На сколько дней вперед можно бронировать',
+            'min_booking_hours': 'Минимальное количество часов для игры',
+            'max_booking_hours': 'Максимальное количество часов для игры',
+            'advance_booking_days': 'На сколько дней вперед можно запланировать игру',
         }
     
     def clean_phone(self):
@@ -458,7 +458,7 @@ class CourtPhotoForm(forms.ModelForm):
         }
 
 class CourtBookingForm(forms.ModelForm):
-    """Форма бронирования площадки"""
+    """Форма планирования игры"""
     
     booking_date = forms.DateField(
         widget=forms.DateInput(attrs={
@@ -466,7 +466,7 @@ class CourtBookingForm(forms.ModelForm):
             'class': 'form-control',
             'id': 'booking_date_input'
         }),
-        label="Дата бронирования"
+        label="Дата игры"
     )
     
     start_time = forms.TimeField(
@@ -512,7 +512,7 @@ class CourtBookingForm(forms.ModelForm):
             'placeholder': 'Введите email участников через запятую'
         }),
         label="Email участников (необязательно)",
-        help_text="Участники получат уведомления о бронировании"
+        help_text="Участники получат уведомления о планировании игры"
     )
     
     class Meta:
@@ -574,11 +574,11 @@ class CourtBookingForm(forms.ModelForm):
         today = date.today()
         
         if booking_date < today:
-            raise ValidationError("Нельзя забронировать площадку на прошедшую дату")
+            raise ValidationError("Нельзя запланировать игру на прошедшую дату")
         
         if self.court and booking_date > today + timedelta(days=self.court.advance_booking_days):
             raise ValidationError(
-                f"Максимальный срок бронирования - {self.court.advance_booking_days} дней вперед"
+                f"Максимальный срок планирования игры - {self.court.advance_booking_days} дней вперед"
             )
         
         return booking_date
@@ -610,11 +610,11 @@ class CourtBookingForm(forms.ModelForm):
         if self.court:
             if hours < self.court.min_booking_hours:
                 raise ValidationError(
-                    f"Минимальное время бронирования: {self.court.min_booking_hours} час(а/ов)"
+                    f"Минимальное время игры: {self.court.min_booking_hours} час(а/ов)"
                 )
             if hours > self.court.max_booking_hours:
                 raise ValidationError(
-                    f"Максимальное время бронирования: {self.court.max_booking_hours} час(а/ов)"
+                    f"Максимальное время игры: {self.court.max_booking_hours} час(а/ов)"
                 )
         
         return hours
@@ -662,7 +662,7 @@ class CourtBookingForm(forms.ModelForm):
             
             if overlapping_bookings.exists():
                 raise ValidationError(
-                    "Выбранное время уже занято или пересекается с другим бронированием. "
+                    "Выбранное время уже занято или пересекается с другой игрой. "
                     "Пожалуйста, выберите другое время."
                 )
         
@@ -698,7 +698,7 @@ class GameCreationForm(forms.ModelForm):
             'class': 'form-check-input',
             'id': 'use_court_booking'
         }),
-        label="Забронировать площадку для игры"
+        label="Запланировать игру"
     )
     
     court_booking = forms.ModelChoiceField(
@@ -709,7 +709,7 @@ class GameCreationForm(forms.ModelForm):
             'id': 'court_booking_select',
             'disabled': True
         }),
-        label="Выберите бронирование"
+        label="Выберите игру"
     )
     
     # ДОБАВИМ ВЫБОР ПЛОЩАДКИ
@@ -812,11 +812,11 @@ class GameCreationForm(forms.ModelForm):
             cleaned_data['location'] = f"{court.name}, {court.address}"
         
         if use_court_booking and not court_booking:
-            raise ValidationError("При выборе опции бронирования необходимо выбрать конкретное бронирование")
+            raise ValidationError("При выборе опции планирования игры необходимо выбрать конкретную игру")
         
         if court_booking:
             if game_date != court_booking.booking_date:
-                raise ValidationError("Дата игры должна совпадать с датой бронирования площадки")
+                raise ValidationError("Дата игры должна совпадать с датой игры на площадке")
             
             booking_end_time = (
                 datetime.combine(court_booking.booking_date, court_booking.start_time) +
@@ -825,7 +825,7 @@ class GameCreationForm(forms.ModelForm):
             
             if game_time < court_booking.start_time or (end_time and end_time > booking_end_time):
                 raise ValidationError(
-                    f"Игра должна проходить в рамках забронированного времени: "
+                    f"Игра должна проходить в рамках запланированного времени: "
                     f"{court_booking.start_time.strftime('%H:%M')} - "
                     f"{booking_end_time.strftime('%H:%M')}"
                 )
@@ -926,13 +926,14 @@ class ProfileEditForm(forms.ModelForm):
     class Meta:
         model = UserProfile
         fields = [
-            'bio', 'city', 'age', 'position', 'positions',
+            'avatar', 'bio', 'city', 'age', 'position', 'positions',
             'skill_level', 'playing_years', 'height', 'jump_reach',
             'play_style', 'preferred_venue', 'play_days',
             'telegram', 'vk', 'whatsapp',
             'notify_bookings', 'notify_messages', 'notify_news'
         ]
         widgets = {
+            'avatar': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
             'bio': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Расскажите о себе...'}),
             'city': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ваш город'}),
             'age': forms.NumberInput(attrs={'class': 'form-control'}),

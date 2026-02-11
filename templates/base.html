@@ -6,11 +6,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}VolleyMap - Карта волейбольных площадок{% endblock %}</title>
+    <meta name="description" content="VolleyMap - сервис для поиска волейбольных площадок, организации игр и знакомства с другими игроками. Найдите ближайшие площадки и единомышленников для игры в волейбол.">
+    <meta name="keywords" content="волейбол, волейбольные площадки, карта площадок, найти игроков, организация игр, спорт, волейбол рядом, площадки для волейбола, VolleyMap">
+    <meta name="author" content="VolleyMap">
+    <meta name="robots" content="index, follow">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://volleymap.ru/">
+    <meta property="og:title" content="VolleyMap - Карта волейбольных площадок">
+    <meta property="og:description" content="VolleyMap - сервис для поиска волейбольных площадок, организации игр и знакомства с другими игроками. Найдите ближайшие площадки и единомышленников для игры в волейбол.">
+    <meta property="og:image" content="{% static 'img/volleyball_favicon.png' %}">
+    <meta property="og:site_name" content="VolleyMap">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://volleymap.ru/">
+    <meta property="twitter:title" content="VolleyMap - Карта волейбольных площадок">
+    <meta property="twitter:description" content="VolleyMap - сервис для поиска волейбольных площадок, организации игр и знакомства с другими игроками. Найдите ближайшие площадки и единомышленников для игры в волейбол.">
+    <meta property="twitter:image" content="{% static 'img/volleyball_favicon.png' %}">
 
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="icon" type="image/webp" href="{% static 'img/favicon.webp' %}">
-    <link rel="shortcut icon" type="image/webp" href="{% static 'img/favicon.webp' %}">
+    <link rel="icon" type="image/png" href="{% static 'img/volleyball_favicon.png' %}">
+    <link rel="shortcut icon" type="image/png" href="{% static 'img/volleyball_favicon.png' %}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'img/volleyball_favicon.png' %}">
     <style>
         * {
             margin: 0;
@@ -599,6 +619,7 @@
 
       <!-- Навигация -->
       <div class="nav" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 15px;">
+          <a href="{% url 'home' %}" class="cta-button" style="padding: 8px 16px; font-size: 14px; margin: 3px;">Главная</a>
           <a href="{% url 'map' %}" class="cta-button" style="padding: 8px 16px; font-size: 14px; margin: 3px;">Карта площадок</a>
           <a href="{% url 'create_game' %}" class="cta-button" style="padding: 8px 16px; font-size: 14px; margin: 3px;">Создать игру</a>
           <a href="{% url 'search' %}" class="cta-button" style="padding: 8px 16px; font-size: 14px; margin: 3px;">Поиск игроков</a>
@@ -614,6 +635,7 @@
               <a href="{% url 'logout' %}" class="cta-button" style="padding: 8px 16px; font-size: 14px; margin: 3px;">Выйти</a>
           {% else %}
               <a href="{% url 'login' %}" class="cta-button" style="padding: 8px 16px; font-size: 14px; margin: 3px;">Войти</a>
+              <a href="{% url 'register' %}" class="cta-button" style="padding: 8px 16px; font-size: 14px; margin: 3px;">Регистрация</a>
           {% endif %}
       </div>
     </div>

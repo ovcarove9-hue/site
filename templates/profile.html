@@ -265,6 +265,7 @@
         color: #64748b;
         font-size: 0.9rem;
     }
+
 </style>
 {% endblock %}
 
@@ -312,9 +313,12 @@
                             </a>
                         {% endif %}
                     {% else %}
-                        <a href="{% url 'add_friend' profile_user.id %}" class="edit-btn" style="background: #10b981;">
+                        <button class="edit-btn" style="background: #10b981;" onclick="sendFriendRequest({{ profile_user.id }})">
                             <i class="fas fa-user-plus"></i> Добавить в друзья
-                        </a>
+                        </button>
+                        <span id="friend-request-sent-{{ profile_user.id }}" style="display: none; color: #10b981; font-weight: bold;">
+                            <i class="fas fa-check"></i> Заявка отправлена
+                        </span>
                     {% endif %}
                 {% endif %}
             {% endif %}
@@ -343,7 +347,7 @@
                     </div>
                     <div class="stat-card">
                         <span class="stat-number">{{ recent_bookings|length }}</span>
-                        <span class="stat-label">Бронирований</span>
+                        <span class="stat-label">Игр</span>
                     </div>
                     <div class="stat-card">
                         <span class="stat-number">{{ friends_count }}</span>
@@ -555,7 +559,7 @@
 
             <!-- Бронирования -->
             <div class="profile-section">
-                <h3><i class="fas fa-calendar-check"></i> Ближайшие бронирования</h3>
+                <h3><i class="fas fa-calendar-check"></i> Ближайшие игры</h3>
                 {% if recent_bookings %}
                     {% for booking in recent_bookings %}
                         <div class="game-item">
@@ -573,9 +577,9 @@
                 {% else %}
                     <p class="empty-field" style="text-align: center;">
                         {% if is_own_profile %}
-                            <a href="{% url 'map' %}">Забронируйте площадку</a>
+                            <a href="{% url 'map' %}">Запланируйте игру</a>
                         {% else %}
-                            Нет предстоящих бронирований
+                            Нет предстоящих игр
                         {% endif %}
                     </p>
                 {% endif %}
@@ -687,6 +691,91 @@
                 friend.parentElement.style.display = 'none';
             }
         }
+    }
+
+    // Функция отправки запроса в друзья
+    async function sendFriendRequest(userId) {
+        const button = event.target;
+        const originalText = button.innerHTML;
+
+        // Показываем индикатор загрузки
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отправка...';
+        button.disabled = true;
+
+        try {
+            const response = await fetch(`/add-friend/${userId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({})
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Скрываем кнопку и показываем сообщение
+                document.getElementById(`friend-request-sent-${userId}`).style.display = 'inline';
+                button.style.display = 'none';
+
+                // Показываем сообщение об успехе
+                showMessage(data.message || 'Заявка в друзья отправлена', 'success');
+            } else {
+                // Восстанавливаем кнопку
+                button.innerHTML = originalText;
+                button.disabled = false;
+
+                // Показываем сообщение об ошибке
+                showMessage(data.error || 'Произошла ошибка', 'error');
+            }
+        } catch (error) {
+            // Восстанавливаем кнопку
+            button.innerHTML = originalText;
+            button.disabled = false;
+
+            // Показываем сообщение об ошибке
+            showMessage('Произошла ошибка при отправке запроса', 'error');
+        }
+    }
+
+    // Функция получения CSRF-токена
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Функция показа сообщений
+    function showMessage(message, type) {
+        // Создаем элемент сообщения
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `alert alert-${type === 'error' ? 'danger' : 'success'} alert-dismissible fade show`;
+        messageDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+        messageDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+        // Добавляем сообщение на страницу
+        document.body.appendChild(messageDiv);
+
+        // Автоматически удаляем сообщение через 5 секунд
+        setTimeout(() => {
+            if (messageDiv.parentNode) {
+                messageDiv.remove();
+            }
+        }, 5000);
     }
 </script>
 {% endblock %}

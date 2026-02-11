@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /accounts/
+Disallow: /search/
+
+Sitemap: https://volleymap.ru/sitemap.xml
+
+# Блокировка для нежелательных страниц
+Disallow: /*?*
+Disallow: /login/
+Disallow: /register/
+Disallow: /logout/

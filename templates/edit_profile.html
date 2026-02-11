@@ -1,0 +1,443 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        padding: 20px;
+    }
+
+    .profile-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    }
+
+    .profile-header {
+        background: linear-gradient(90deg, #4f46e5, #7c3aed);
+        color: white;
+        padding: 2rem;
+        text-align: center;
+        position: relative;
+    }
+
+    .profile-avatar {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        border: 5px solid white;
+        margin: 0 auto 1rem;
+        overflow: hidden;
+        background: #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .profile-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .profile-avatar i {
+        font-size: 4rem;
+        color: #94a3b8;
+    }
+
+    .profile-actions {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        display: flex;
+        gap: 10px;
+    }
+
+    .profile-content {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        padding: 2rem;
+    }
+
+    @media (max-width: 768px) {
+        .profile-content {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .profile-section {
+        background: #f8fafc;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .edit-btn {
+        background: #4f46e5;
+        color: white;
+        border: none;
+        padding: 0.5rem 1.5rem;
+        border-radius: 25px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s;
+        text-decoration: none;
+    }
+
+    .edit-btn:hover {
+        background: #4338ca;
+        transform: translateY(-2px);
+        color: white;
+        text-decoration: none;
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: #1e293b;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        font-size: 1rem;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+    }
+
+    .form-row {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .form-col {
+        flex: 1;
+    }
+
+    .form-text {
+        color: #64748b;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+
+    .text-danger {
+        color: #ef4444;
+        font-size: 0.875rem;
+    }
+
+    .alert-danger {
+        background: #fee2e2;
+        color: #dc2626;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="profile-container">
+    <!-- Шапка профиля -->
+    <div class="profile-header">
+        <div class="profile-avatar">
+            {% if profile.avatar %}
+                <img src="{{ profile.avatar.url }}" alt="{{ user.username }}">
+            {% else %}
+                <i class="fas fa-user"></i>
+            {% endif %}
+        </div>
+
+        <h1>Редактирование профиля</h1>
+        <p class="mb-0">Заполните информацию о себе, чтобы другие игроки могли вас найти</p>
+
+        <div class="profile-actions">
+            <a href="{% url 'profile' user.id %}" class="edit-btn">
+                <i class="fas fa-arrow-left"></i> Назад к профилю
+            </a>
+        </div>
+    </div>
+
+    <!-- Основное содержимое -->
+    <div class="profile-content">
+        <!-- Левая колонка: основная информация -->
+        <div>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert-danger">
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <!-- Аватар -->
+                <div class="profile-section">
+                    <h3><i class="fas fa-user-circle"></i> Аватар</h3>
+                    <div class="text-center mb-4">
+                        <div class="avatar-preview mb-3" onclick="document.getElementById('id_avatar').click()" style="cursor: pointer; display: inline-block;">
+                            {% if profile.avatar %}
+                                <img id="avatar_preview_img" src="{{ profile.avatar.url }}" alt="Аватар" class="rounded-circle" style="width: 150px; height: 150px; object-fit: cover; border: 5px solid white;">
+                            {% else %}
+                                <div class="bg-light rounded-circle d-flex align-items-center justify-content-center" style="width: 150px; height: 150px; border: 5px solid white;">
+                                    <i id="avatar_icon" class="fas fa-user text-muted" style="font-size: 4rem;"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <input type="file" id="id_avatar" name="avatar" accept="image/*" style="display: none;" onchange="previewAvatar(event)">
+                        <p class="text-muted">Нажмите на аватар, чтобы загрузить новое фото</p>
+                    </div>
+                </div>
+
+                <!-- Основная информация -->
+                <div class="profile-section">
+                    <h3><i class="fas fa-user-circle"></i> Основная информация</h3>
+
+                    <div class="form-group">
+                        <label class="form-label">Имя</label>
+                        {{ form.first_name }}
+                        {% if form.first_name.errors %}
+                            <div class="text-danger">{{ form.first_name.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Фамилия</label>
+                        {{ form.last_name }}
+                        {% if form.last_name.errors %}
+                            <div class="text-danger">{{ form.last_name.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <div class="text-danger">{{ form.email.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-col">
+                            <label class="form-label">Возраст</label>
+                            {{ form.age }}
+                            {% if form.age.errors %}
+                                <div class="text-danger">{{ form.age.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="form-col">
+                            <label class="form-label">Город</label>
+                            {{ form.city }}
+                            {% if form.city.errors %}
+                                <div class="text-danger">{{ form.city.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">О себе</label>
+                        {{ form.bio }}
+                        {% if form.bio.errors %}
+                            <div class="text-danger">{{ form.bio.errors }}</div>
+                        {% endif %}
+                        <div class="form-text">Расскажите о своем опыте в волейболе, достижениях, стиле игры</div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Правая колонка: волейбольные данные и контакты -->
+        <div>
+            <!-- Волейбольные данные -->
+            <div class="profile-section">
+                <h3><i class="fas fa-volleyball-ball"></i> Волейбольные данные</h3>
+
+                <div class="form-group">
+                    <label class="form-label">Основная позиция</label>
+                    {{ form.position }}
+                    {% if form.position.errors %}
+                        <div class="text-danger">{{ form.position.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Уровень игры</label>
+                    {{ form.skill_level }}
+                    {% if form.skill_level.errors %}
+                        <div class="text-danger">{{ form.skill_level.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-row">
+                    <div class="form-col">
+                        <label class="form-label">Стаж (лет)</label>
+                        {{ form.playing_years }}
+                        {% if form.playing_years.errors %}
+                            <div class="text-danger">{{ form.playing_years.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="form-col">
+                        <label class="form-label">Рост (см)</label>
+                        {{ form.height }}
+                        {% if form.height.errors %}
+                            <div class="text-danger">{{ form.height.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-col">
+                        <label class="form-label">Прыжок (см)</label>
+                        {{ form.jump_reach }}
+                        {% if form.jump_reach.errors %}
+                            <div class="text-danger">{{ form.jump_reach.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Стиль игры</label>
+                    {{ form.play_style }}
+                    {% if form.play_style.errors %}
+                        <div class="text-danger">{{ form.play_style.errors }}</div>
+                    {% endif %}
+                    <div class="form-text">Например: атакующий, тактический, защитный</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Дни для игр</label>
+                    {{ form.play_days }}
+                    {% if form.play_days.errors %}
+                        <div class="text-danger">{{ form.play_days.errors }}</div>
+                    {% endif %}
+                    <div class="form-text">Например: вечера будних, выходные, понедельник-среда</div>
+                </div>
+            </div>
+
+            <!-- Контакты -->
+            <div class="profile-section">
+                <h3><i class="fas fa-address-book"></i> Контакты</h3>
+
+                <div class="form-group">
+                    <label class="form-label">Telegram</label>
+                    {{ form.telegram }}
+                    {% if form.telegram.errors %}
+                        <div class="text-danger">{{ form.telegram.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">ВКонтакте</label>
+                    {{ form.vk }}
+                    {% if form.vk.errors %}
+                        <div class="text-danger">{{ form.vk.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">WhatsApp</label>
+                    {{ form.whatsapp }}
+                    {% if form.whatsapp.errors %}
+                        <div class="text-danger">{{ form.whatsapp.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Уведомления -->
+            <div class="profile-section">
+                <h3><i class="fas fa-bell"></i> Уведомления</h3>
+
+                <div class="form-group">
+                    <div class="form-check">
+                        {{ form.notify_bookings }}
+                        <label class="form-check-label" for="{{ form.notify_bookings.id_for_label }}">
+                            Уведомлять об играх
+                        </label>
+                    </div>
+
+                    <div class="form-check">
+                        {{ form.notify_messages }}
+                        <label class="form-check-label" for="{{ form.notify_messages.id_for_label }}">
+                            Уведомлять о сообщениях
+                        </label>
+                    </div>
+
+                    <div class="form-check">
+                        {{ form.notify_news }}
+                        <label class="form-check-label" for="{{ form.notify_news.id_for_label }}">
+                            Уведомлять о новостях сообщества
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Кнопки действий -->
+            <div class="profile-section">
+                <div class="d-grid gap-2">
+                    <button type="submit" class="edit-btn" style="background: #10b981; width: 100%;">
+                        <i class="fas fa-save"></i> Сохранить изменения
+                    </button>
+                    <a href="{% url 'profile' user.id %}" class="edit-btn" style="background: #64748b; width: 100%;">
+                        <i class="fas fa-times"></i> Отмена
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function previewAvatar(event) {
+        const input = event.target;
+        const preview = document.getElementById('avatar_preview_img');
+        const icon = document.getElementById('avatar_icon');
+
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+                if (icon) icon.style.display = 'none';
+            }
+
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    // Инициализация формы
+    document.addEventListener('DOMContentLoaded', function() {
+        // Добавляем классы к полям формы
+        const formElements = document.querySelectorAll('input, select, textarea');
+        formElements.forEach(element => {
+            if (!element.classList.contains('form-check-input')) {
+                element.classList.add('form-control');
+            }
+        });
+    });
+</script>
+{% endblock %}

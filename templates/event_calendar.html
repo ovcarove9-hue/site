@@ -360,7 +360,13 @@
     <div class="calendar-header">
         <i class="fas fa-calendar-alt volleyball-icon"></i>
         <h1>{{ page_title }}</h1>
-        <p class="text-muted">Просмотрите все запланированные волейбольные события</p>
+        {% if filter_param == 'today' %}
+            <p class="text-muted">Просмотрите запланированные волейбольные события на сегодня</p>
+        {% elif filter_param == 'upcoming' %}
+            <p class="text-muted">Просмотрите предстоящие волейбольные события</p>
+        {% else %}
+            <p class="text-muted">Просмотрите все запланированные волейбольные события</p>
+        {% endif %}
     </div>
 
     <div class="calendar-navigation">
